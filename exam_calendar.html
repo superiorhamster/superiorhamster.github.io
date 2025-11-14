@@ -142,6 +142,9 @@
         // Biến toàn cục để lưu trữ dữ liệu đã trích xuất
         let currentExtractedData = [];
         
+        // BIẾN MỚI: Lưu trữ các sự kiện đã được lọc cho tệp .ics
+        let currentFilteredEvents = [];
+        
         // Định nghĩa tiêu đề bảng
         const TABLE_HEADERS = [
             "Học kỳ", "Môn học", "Nhóm lớp", "Ngày thi", "Loại thi", "Cơ sở", 
@@ -161,6 +164,7 @@
             calendarActions.classList.add('hidden');
             calendarLinksContainer.innerHTML = "";
             currentExtractedData = [];
+            currentFilteredEvents = []; // Xóa các sự kiện đã lọc
 
             if (rawText.trim() === "") {
                 displayMessage("Vui lòng dán nội dung vào ô văn bản.", "error");
@@ -369,8 +373,12 @@
         function generateCalendarLinks(mode) { // mode là 'GK' hoặc 'CK'
             calendarLinksContainer.innerHTML = ""; // Xóa link cũ
             
+            // SỬA LỖI: Chỉ khai báo 'indices' MỘT LẦN
             const indices = findColumnIndices();
             if (!indices) return; // Lỗi đã được hiển thị
+
+            // Xóa các sự kiện đã lọc trước đó
+            currentFilteredEvents = [];
 
             // Lọc dữ liệu dựa trên mode (GK/CK)
             const filteredData = currentExtractedData.filter(row => {
@@ -409,7 +417,6 @@
                 const description = `Môn học: ${monHoc}\nMã phòng: ${maPhong}\nHọc kỳ: ${hocKy}`;
 
                 // 3. Tạo chuỗi thời gian
-                // Chúng ta dùng giờ địa phương (không có Z)
                 const dates = `${formatDateForGCalLink(startTime)}/${formatDateForGCalLink(endTime)}`;
 
                 // 4. Tạo link
@@ -423,6 +430,16 @@
                 links.push({
                     href: gcalLink.href,
                     text: `${monHoc} (${ngayThi} lúc ${gioBatDau})`
+                });
+
+                // LƯU DỮ LIỆU CHO NÚT "THÊM TẤT CẢ"
+                currentFilteredEvents.push({
+                    startTime,
+                    endTime,
+                    title,
+                    description,
+                    location: `Phòng: ${maPhong}`,
+                    hocKy: hocKy // THÊM HỌC KỲ VÀO ĐÂY
                 });
             }
 
@@ -444,6 +461,84 @@
                 list.appendChild(a);
             });
             calendarLinksContainer.appendChild(list);
+
+            // THÊM NÚT "TẢI TỆP .ICS (THÊM TẤT CẢ)"
+            if (links.length > 0) {
+                const addAllButton = document.createElement('button');
+                addAllButton.id = 'addAllToCalendarButton';
+                addAllButton.textContent = `Tải tệp .ics (Thêm tất cả ${mode})`;
+                // Cập nhật class để có khoảng cách
+                addAllButton.className = "mt-6 w-full bg-gray-700 text-white py-3 px-6 rounded-lg font-semibold hover:bg-gray-800 transition-colors duration-200 custom-focus shadow";
+                
+                addAllButton.onclick = () => downloadICSFile(mode);
+                
+                // Chèn nút "Thêm tất cả" vào TRƯỚC tiêu đề danh sách
+                calendarLinksContainer.insertBefore(addAllButton, listTitle);
+            }
+        }
+
+        /**
+         * HÀM MỚI: Lấy thời gian UTC cho DTSTAMP
+         */
+        function getUTCDateString(date) {
+            return date.toISOString().replace(/[-:.]/g, '').substring(0, 15) + 'Z';
+        }
+
+        /**
+         * HÀM MỚI: Tạo và tải tệp .ics
+         */
+        function downloadICSFile(mode) {
+            if (currentFilteredEvents.length === 0) {
+                displayMessage("Không có sự kiện nào để tạo tệp .ics.", "error");
+                return;
+            }
+
+            const icsContent = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//TrinhTrichXuatLichThi//VN',
+            ];
+
+            const dtStamp = getUTCDateString(new Date());
+
+            currentFilteredEvents.forEach((event, index) => {
+                const uid = `lichthi-${Date.now()}-${index}@bachkhoa.edu.vn`;
+                const dtStart = formatDateForGCalLink(event.startTime);
+                const dtEnd = formatDateForGCalLink(event.endTime);
+                const summary = event.title;
+                const description = event.description.replace(/\n/g, '\\n'); // Escape newlines cho .ics
+                const location = event.location;
+
+                icsContent.push('BEGIN:VEVENT');
+                icsContent.push(`UID:${uid}`);
+                icsContent.push(`DTSTAMP:${dtStamp}`);
+                icsContent.push(`DTSTART:${dtStart}`);
+                icsContent.push(`DTEND:${dtEnd}`);
+                icsContent.push(`SUMMARY:${summary}`);
+                icsContent.push(`DESCRIPTION:${description}`);
+                icsContent.push(`LOCATION:${location}`);
+                icsContent.push('END:VEVENT');
+            });
+
+            icsContent.push('END:VCALENDAR');
+
+            const icsString = icsContent.join('\n');
+            const blob = new Blob([icsString], { type: 'text/calendar;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            // Lấy học kỳ từ sự kiện đầu tiên (giả sử tất cả đều cùng học kỳ)
+            const hocKy = currentFilteredEvents[0].hocKy; // ví dụ: "20251"
+            // Lấy 3 ký tự cuối của học kỳ
+            const kyHocCode = hocKy.slice(-3); // ví dụ: "251"
+
+            const a = document.createElement('a');
+            a.href = url;
+            // Cập nhật tên tệp theo yêu cầu
+            a.download = `LichThi_${mode}_${kyHocCode}.ics`; // Tên tệp, ví dụ: LichThi_CK_251.ics
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
     </script>
