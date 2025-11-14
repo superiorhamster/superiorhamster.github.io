@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình trích xuất Lịch thi</title>
+    <!-- Tải Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tải font Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Áp dụng font Inter làm font chữ mặc định */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Hiệu ứng focus-visible tùy chỉnh để dễ nhìn hơn */
+        .custom-focus:focus-visible {
+            outline: 2px solid theme('colors.indigo.400');
+            outline-offset: 2px;
+        }
+        /* Style cho bảng kết quả */
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem; /* Tương đương mt-6 */
+        }
+        .result-table th, .result-table td {
+            border: 1px solid #e5e7eb; /* Tương đương border-gray-200 */
+            padding: 0.75rem 1rem; /* Tương đương p-3 px-4 */
+            text-align: left;
+            font-size: 0.875rem; /* Tương đương text-sm */
+        }
+        .result-table th {
+            background-color: #f9fafb; /* Tương đương bg-gray-50 */
+            font-weight: 600; /* Tương đương font-semibold */
+            color: #374151; /* Tương đương text-gray-700 */
+        }
+        .result-table td {
+            color: #1f2937; /* Tương đương text-gray-900 */
+        }
+        .result-table tr:nth-child(even) {
+            background-color: #f9fafb; /* Tương đương even:bg-gray-50 */
+        }
+        /* Style cho danh sách link Google Calendar */
+        .gcal-link-list {
+            margin-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 1rem;
+        }
+        .gcal-link-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            background-color: #f9fafb;
+            color: #374151;
+            font-weight: 500;
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+            transition: background-color 0.2s;
+            border: 1px solid #e5e7eb;
+        }
+        .gcal-link-item:hover {
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen py-12 px-4 antialiased">
+
+    <!-- Phần tử chứa toàn bộ ứng dụng -->
+    <div class="w-full max-w-5xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+        
+        <!-- Tiêu đề -->
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
+            Trình trích xuất Lịch thi
+        </h1>
+        
+        <!-- Hướng dẫn -->
+        <p class="text-center text-gray-600 mb-4">
+            Dán toàn bộ nội dung (Ctrl+A rồi Ctrl+C) từ trang lịch thi của bạn vào ô bên dưới và nhấn "Trích xuất".
+        </p>
+
+        <!-- Ô nhập liệu -->
+        <textarea 
+            id="rawTextInput"
+            rows="10"
+            class="w-full p-4 border border-gray-300 rounded-lg focus:outline-none custom-focus shadow-sm"
+            placeholder="Dán nội dung web vào đây..."
+        ></textarea>
+
+        <!-- Nút xử lý -->
+        <div class="text-center mt-4">
+            <button 
+                id="processButton"
+                class="bg-indigo-600 text-white py-3 px-8 rounded-lg font-semibold hover:bg-indigo-700 transition-colors duration-200 custom-focus shadow-md"
+            >
+                Trích xuất dữ liệu
+            </button>
+        </div>
+
+        <!-- Nút hành động Lịch (ẩn ban đầu) -->
+        <div id="calendarActions" class="hidden text-center mt-6 space-x-4">
+            <button 
+                id="saveGKButton"
+                class="bg-green-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-green-700 transition-colors duration-200 custom-focus shadow"
+            >
+                Tạo Lịch thi GK
+            </button>
+            <button 
+                id="saveCKButton"
+                class="bg-blue-600 text-white py-2 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 custom-focus shadow"
+            >
+                Tạo Lịch thi CK
+            </button>
+        </div>
+
+        <!-- Vùng hiển thị kết quả bảng -->
+        <div id="tableResultContainer" class="mt-8">
+            <!-- Thông báo lỗi/trống sẽ xuất hiện ở đây -->
+        </div>
+
+        <!-- Vùng hiển thị link Google Calendar -->
+        <div id="calendarLinksContainer" class="mt-6">
+            <!-- Các link Google Calendar sẽ được tạo ở đây -->
+        </div>
+
+    </div>
+
+    <script>
+        // Lấy các phần tử DOM
+        const rawTextInput = document.getElementById('rawTextInput');
+        const processButton = document.getElementById('processButton');
+        const tableResultContainer = document.getElementById('tableResultContainer'); // Đổi tên
+        
+        // Thêm các phần tử mới
+        const calendarActions = document.getElementById('calendarActions');
+        const saveGKButton = document.getElementById('saveGKButton');
+        const saveCKButton = document.getElementById('saveCKButton');
+        const calendarLinksContainer = document.getElementById('calendarLinksContainer');
+
+        // Biến toàn cục để lưu trữ dữ liệu đã trích xuất
+        let currentExtractedData = [];
+        
+        // Định nghĩa tiêu đề bảng
+        const TABLE_HEADERS = [
+            "Học kỳ", "Môn học", "Nhóm lớp", "Ngày thi", "Loại thi", "Cơ sở", 
+            "Mã phòng", "Thứ", "Giờ bắt đầu", "Tổng số phút", "Cập nhật"
+        ];
+
+        // Gắn sự kiện click cho nút
+        processButton.addEventListener('click', processRawText);
+        // Gắn sự kiện cho các nút lịch
+        saveGKButton.addEventListener('click', () => generateCalendarLinks('GK'));
+        saveCKButton.addEventListener('click', () => generateCalendarLinks('CK'));
+
+
+        function processRawText() {
+            const rawText = rawTextInput.value;
+            // Ẩn các nút hành động và xóa link cũ khi xử lý
+            calendarActions.classList.add('hidden');
+            calendarLinksContainer.innerHTML = "";
+            currentExtractedData = [];
+
+            if (rawText.trim() === "") {
+                displayMessage("Vui lòng dán nội dung vào ô văn bản.", "error");
+                return;
+            }
+
+            // 1. Xác định khối dữ liệu
+            // Tìm chính xác chuỗi header bằng ký tự tab (\t)
+            const headerString = "Học kỳ\tMôn học\tNhóm lớp\tNgày thi\tLoại thi\tCơ sở\tMã phòng\tThứ\tGiờ bắt đầu\tTổng số phút\tCập nhật cuối cùng vào lúc";
+            const footerString = "Trình bày từ dòng";
+            
+            const dataStartIndex_header = rawText.indexOf(headerString);
+
+            if (dataStartIndex_header === -1) {
+                displayMessage("Không tìm thấy bảng dữ liệu quan trọng (không thấy header). Vui lòng đảm bảo bạn đã sao chép toàn bộ trang. Hãy thử sao chép lại.", "error");
+                return;
+            }
+
+            // Vị trí bắt đầu của dữ liệu là ngay sau chuỗi header
+            const dataStartIndex = dataStartIndex_header + headerString.length;
+            
+            // Cắt lấy phần văn bản sau header
+            let dataBlock = rawText.substring(dataStartIndex);
+            
+            // Cắt bỏ phần footer
+            const dataEndIndex = dataBlock.indexOf(footerString);
+            if (dataEndIndex !== -1) {
+                dataBlock = dataBlock.substring(0, dataEndIndex);
+            }
+            dataBlock = dataBlock.trim();
+
+            // 2. Tách các dòng
+            const rowStrings = dataBlock.split('\n').filter(r => r.trim() !== "");
+
+            if (rowStrings.length === 0) {
+                displayMessage("Đã tìm thấy bảng nhưng không có dữ liệu nào.", "info");
+                return;
+            }
+
+            // 3. Tách bằng tab
+            const extractedData = [];
+            let failedRows = 0;
+
+            // 4. Phân tích từng dòng
+            for (const rowString of rowStrings) {
+                const cells = rowString.trim().split('\t'); // Tách các ô bằng ký tự tab
+                
+                // Kiểm tra xem có đúng 11 cột không (bằng số lượng tiêu đề)
+                if (cells.length === TABLE_HEADERS.length) {
+                    extractedData.push(cells.map(cell => cell.trim())); // Thêm và làm sạch
+                } else if (cells.length > 1) { // Bỏ qua các dòng trống có thể bị sót lại
+                    failedRows++;
+                    console.warn(`Không thể phân tích dòng (sai số cột, mong đợi ${TABLE_HEADERS.length}, nhận được ${cells.length}):`, rowString);
+                }
+            }
+
+            // 5. Hiển thị kết quả
+            if (extractedData.length > 0) {
+                displayResults(extractedData, failedRows);
+            } else {
+                displayMessage("Không thể trích xuất dữ liệu từ nội dung đã dán. Cấu trúc có thể đã thay đổi.", "error");
+            }
+        }
+
+        function displayMessage(message, type = "info") {
+            let colorClass = "bg-blue-100 border-blue-400 text-blue-700";
+            if (type === "error") {
+                colorClass = "bg-red-100 border-red-400 text-red-700";
+            } else if (type === "warning") {
+                colorClass = "bg-yellow-100 border-yellow-400 text-yellow-700";
+            }
+            
+            // Hiển thị thông báo trong container bảng
+            tableResultContainer.innerHTML = `<div class="border-l-4 ${colorClass} p-4 rounded" role="alert">
+                <p class="font-bold">${type === 'error' ? 'Lỗi' : 'Thông báo'}</p>
+                <p>${message}</p>
+            </div>`;
+        }
+
+        function displayResults(data, failedRows) {
+            tableResultContainer.innerHTML = ""; // Xóa nội dung cũ
+
+            // Lưu trữ dữ liệu để tạo lịch
+            currentExtractedData = data;
+            // Hiển thị các nút tạo lịch
+            calendarActions.classList.remove('hidden');
+            // Xóa các link lịch cũ
+            calendarLinksContainer.innerHTML = "";
+
+            if (failedRows > 0) {
+                // Tạm thời hiển thị thông báo lỗi ngay trên đầu
+                const warnMsg = document.createElement('div');
+                warnMsg.innerHTML = `<div class="border-l-4 bg-yellow-100 border-yellow-400 text-yellow-700 p-4 rounded mb-4" role="alert">
+                    <p class="font-bold">Cảnh báo</p>
+                    <p>Trích xuất thành công ${data.length} dòng. ${failedRows} dòng thất bại (xem console để biết chi tiết).</p>
+                </div>`;
+                tableResultContainer.appendChild(warnMsg);
+            }
+
+            const table = document.createElement('table');
+            table.className = "result-table rounded-lg overflow-hidden shadow";
+            
+            // Tạo Thead
+            const thead = table.createTHead();
+            const headerRow = thead.insertRow();
+            TABLE_HEADERS.forEach(headerText => {
+                const th = document.createElement('th');
+                th.textContent = headerText;
+                headerRow.appendChild(th);
+            });
+
+            // Tạo Tbody
+            const tbody = table.createTBody();
+            data.forEach(rowData => {
+                const tr = tbody.insertRow();
+                rowData.forEach(cellData => {
+                    const td = tr.insertCell();
+                    td.textContent = cellData.trim(); // Làm sạch dữ liệu cell
+                });
+            });
+
+            tableResultContainer.appendChild(table);
+        }
+
+        /**
+         * Hàm helper để tìm chỉ mục (index) của các cột cần thiết.
+         * Trả về một object map tên cột và chỉ mục.
+         */
+        function findColumnIndices() {
+            const indices = {
+                hocKy: TABLE_HEADERS.indexOf("Học kỳ"),
+                monHoc: TABLE_HEADERS.indexOf("Môn học"),
+                ngayThi: TABLE_HEADERS.indexOf("Ngày thi"),
+                loaiThi: TABLE_HEADERS.indexOf("Loại thi"),
+                maPhong: TABLE_HEADERS.indexOf("Mã phòng"),
+                gioBatDau: TABLE_HEADERS.indexOf("Giờ bắt đầu"),
+                tongPhut: TABLE_HEADERS.indexOf("Tổng số phút")
+            };
+            
+            // Kiểm tra nếu bất kỳ cột nào không tìm thấy (-1)
+            for (const key in indices) {
+                if (indices[key] === -1) {
+                    console.error(`Không tìm thấy cột: ${key}`);
+                    displayMessage(`Lỗi cấu hình: Không tìm thấy cột "${key}" trong TABLE_HEADERS.`, "error");
+                    return null;
+                }
+            }
+            return indices;
+        }
+
+        /**
+         * Phân tích ngày, giờ và làm tròn thời gian kết thúc
+         */
+        function parseAndRoundDateTime(dateStr, timeStr, durationMinutes) {
+            try {
+                // dateStr = "2025-10-20"
+                // timeStr = "07g00" hoặc "13g00"
+                const [year, month, day] = dateStr.split('-').map(Number);
+                const [hour, minute] = timeStr.replace('g', '').match(/.{1,2}/g).map(Number);
+                
+                // Tháng trong JavaScript là 0-indexed (0-11)
+                const startTime = new Date(year, month - 1, day, hour, minute);
+
+                // Tính thời gian kết thúc
+                const endTime = new Date(startTime.getTime() + durationMinutes * 60000);
+
+                // --- Logic làm tròn lên 30 phút ---
+                const endMinutes = endTime.getMinutes();
+                
+                if (endMinutes > 0 && endMinutes <= 30) {
+                    // Nếu là 1-30, làm tròn lên 30
+                    endTime.setMinutes(30);
+                    endTime.setSeconds(0);
+                    endTime.setMilliseconds(0);
+                } else if (endMinutes > 30) {
+                    // Nếu là 31-59, làm tròn lên giờ tiếp theo
+                    endTime.setHours(endTime.getHours() + 1);
+                    endTime.setMinutes(0);
+                    endTime.setSeconds(0);
+                    endTime.setMilliseconds(0);
+                }
+                // Nếu là 0 hoặc 30, giữ nguyên
+
+                return { startTime, endTime };
+            } catch (e) {
+                console.error("Lỗi phân tích ngày giờ:", dateStr, timeStr, e);
+                return null;
+            }
+        }
+
+        /**
+         * Định dạng Date object thành chuỗi YYYYMMDDTHHmmSS cho Google Calendar
+         */
+        function formatDateForGCalLink(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}${month}${day}T${hours}${minutes}00`;
+        }
+
+        /**
+         * Hàm chính để tạo và hiển thị các link Google Calendar
+         */
+        function generateCalendarLinks(mode) { // mode là 'GK' hoặc 'CK'
+            calendarLinksContainer.innerHTML = ""; // Xóa link cũ
+            
+            const indices = findColumnIndices();
+            if (!indices) return; // Lỗi đã được hiển thị
+
+            // Lọc dữ liệu dựa trên mode (GK/CK)
+            const filteredData = currentExtractedData.filter(row => {
+                const loaiThi = row[indices.loaiThi];
+                // Chấp nhận 'GK' hoặc 'Ktr' (cho Giữa kỳ)
+                if (mode === 'GK') return loaiThi === 'GK' || loaiThi === 'Ktr';
+                // Chấp nhận 'CK' hoặc 'Thi' (cho Cuối kỳ)
+                if (mode === 'CK') return loaiThi === 'CK' || loaiThi === 'Thi';
+                return false;
+            });
+
+            if (filteredData.length === 0) {
+                calendarLinksContainer.innerHTML = `<p class="text-gray-600">Không tìm thấy lịch thi nào cho loại <strong>${mode}</strong>.</p>`;
+                return;
+            }
+
+            const links = [];
+
+            for (const row of filteredData) {
+                const hocKy = row[indices.hocKy];
+                const monHoc = row[indices.monHoc];
+                const maPhong = row[indices.maPhong];
+                const ngayThi = row[indices.ngayThi];
+                const gioBatDau = row[indices.gioBatDau];
+                const tongPhut = parseInt(row[indices.tongPhut], 10);
+
+                const dateTimes = parseAndRoundDateTime(ngayThi, gioBatDau, tongPhut);
+                if (!dateTimes) continue; // Bỏ qua nếu lỗi phân tích
+
+                const { startTime, endTime } = dateTimes;
+
+                // 1. Tạo Tiêu đề
+                const title = `[${mode}] ${monHoc}`;
+
+                // 2. Tạo mô tả
+                const description = `Môn học: ${monHoc}\nMã phòng: ${maPhong}\nHọc kỳ: ${hocKy}`;
+
+                // 3. Tạo chuỗi thời gian
+                // Chúng ta dùng giờ địa phương (không có Z)
+                const dates = `${formatDateForGCalLink(startTime)}/${formatDateForGCalLink(endTime)}`;
+
+                // 4. Tạo link
+                const gcalLink = new URL('https://www.google.com/calendar/render');
+                gcalLink.searchParams.set('action', 'TEMPLATE');
+                gcalLink.searchParams.set('text', title);
+                gcalLink.searchParams.set('dates', dates);
+                gcalLink.searchParams.set('details', description);
+                gcalLink.searchParams.set('location', `Phòng: ${maPhong}`); // Thêm vị trí
+
+                links.push({
+                    href: gcalLink.href,
+                    text: `${monHoc} (${ngayThi} lúc ${gioBatDau})`
+                });
+            }
+
+            // Hiển thị các link
+            const listTitle = document.createElement('h3');
+            listTitle.className = "text-xl font-semibold text-gray-700";
+            listTitle.textContent = `Các link Google Calendar cho ${mode} (${links.length}):`;
+            calendarLinksContainer.appendChild(listTitle);
+
+            const list = document.createElement('div');
+            list.className = "gcal-link-list";
+            links.forEach(link => {
+                const a = document.createElement('a');
+                a.href = link.href;
+                a.textContent = link.text;
+                a.className = "gcal-link-item";
+                a.target = "_blank"; // Mở trong tab mới
+                a.rel = "noopener noreferrer";
+                list.appendChild(a);
+            });
+            calendarLinksContainer.appendChild(list);
+        }
+
+    </script>
+</body>
+</html>
