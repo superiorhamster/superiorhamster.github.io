@@ -23,18 +23,9 @@
             max-width: 400px;
             width: 100%;
         }
-        h1 {
-            color: #333;
-            margin-bottom: 1.5rem;
-        }
-        p {
-            color: #666;
-            margin-bottom: 2rem;
-        }
-        .project-list {
-            list-style: none;
-            padding: 0;
-        }
+        h1 { color: #333; margin-bottom: 1.5rem; }
+        p { color: #666; margin-bottom: 2rem; }
+        .project-list { list-style: none; padding: 0; }
         .project-btn {
             display: block;
             width: 100%;
@@ -46,10 +37,13 @@
             border-radius: 5px;
             transition: background-color 0.3s;
             font-weight: bold;
+            box-sizing: border-box; /* Đảm bảo padding không làm vỡ khung */
         }
-        .project-btn:hover {
-            background-color: #0056b3;
-        }
+        .project-btn:hover { background-color: #0056b3; }
+        
+        /* Màu riêng cho nút React để nổi bật hơn */
+        .react-btn { background-color: #005a8d; }
+        .react-btn:hover { background-color: #00446b; }
     </style>
 </head>
 <body>
@@ -62,11 +56,15 @@
             <li>
                 <a href="exam_calendar.html" class="project-btn">📅 Xuất lịch thi từ MyBK</a>
             </li>
+            
+            
             <li>
-                <a href="dkmh_graph_calendar.html" class="project-btn">📅 Xuất lịch đkmh tạm thời từ MyBK</a>
+                <a href="/dkmh_cad/" class="project-btn react-btn">
+                    🚀 Tool Xem Lịch (Bản React Xịn)
+                </a>
             </li>
             
-            </ul>
+        </ul>
     </div>
 
 </body>
