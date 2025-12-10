@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tool Xem Lịch Học - Preview</title>
+    <style>
+        :root {
+            --primary-color: #005a8d;
+            --bg-color: #f4f7f6;
+            --border-color: #ddd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1 { text-align: center; color: var(--primary-color); }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Input Section */
+        .input-section { margin-bottom: 20px; }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+            box-sizing: border-box; 
+            resize: vertical;
+        }
+
+        .controls {
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        button:hover { background-color: #00446b; }
+
+        .stats {
+            font-weight: bold;
+            color: #555;
+        }
+
+        /* Schedule Grid */
+        .schedule-container {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+
+        .schedule-grid {
+            display: grid;
+            /* Cột đầu là Tiết, 7 cột sau là Thứ 2 -> CN */
+            grid-template-columns: 60px repeat(7, 1fr); 
+            /* Header + 16 tiết học */
+            grid-template-rows: 40px repeat(16, 50px); 
+            gap: 1px;
+            background-color: var(--border-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .cell {
+            background-color: #fff;
+            position: relative;
+        }
+
+        /* Header Row */
+        .header-cell {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Time Column */
+        .time-cell {
+            background-color: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* Class Blocks */
+        .class-block {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            padding: 5px;
+            font-size: 11px;
+            color: #fff;
+            overflow: hidden;
+            border-radius: 4px;
+            z-index: 10;
+            transition: transform 0.2s, z-index 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            /* Important for overlap visibility */
+            mix-blend-mode: multiply; 
+        }
+
+        .class-block:hover {
+            transform: scale(1.05);
+            z-index: 100;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            mix-blend-mode: normal; /* Make it solid on hover */
+            opacity: 1 !important;
+        }
+
+        .class-info { font-weight: bold; margin-bottom: 2px; }
+        .room-info { font-size: 10px; background: rgba(0,0,0,0.2); padding: 2px; border-radius: 3px; display: inline-block;}
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Tool Xem Lịch Học (Preview 1 Tuần)</h1>
+    
+    <div class="input-section">
+        <label for="rawInput"><strong>Dán nội dung web (Ctrl+A) vào đây:</strong></label>
+        <textarea id="rawInput" placeholder="Paste toàn bộ nội dung trang đăng ký môn học vào đây..."></textarea>
+        
+        <div class="controls">
+            <div class="stats" id="statsArea">Chưa có dữ liệu</div>
+            <button onclick="processData()">Xem Lịch Ngay</button>
+        </div>
+    </div>
+
+    <div class="schedule-container" id="scheduleWrapper" style="display:none;">
+        <div class="schedule-grid" id="scheduleGrid">
+            </div>
+    </div>
+</div>
+
+<script>
+    // Hàm tạo màu ngẫu nhiên nhưng dễ nhìn (pastel/đậm vừa phải)
+    function getColor(stringInput) {
+        let hash = 0;
+        for (let i = 0; i < stringInput.length; i++) {
+            hash = stringInput.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const c = (hash & 0x00FFFFFF).toString(16).toUpperCase();
+        const color = "#" + "00000".substring(0, 6 - c.length) + c;
+        // Chuyển sang rgba để có độ trong suốt
+        return hexToRgba(color, 0.75);
+    }
+
+    function hexToRgba(hex, alpha) {
+        let r = parseInt(hex.slice(1, 3), 16);
+        let g = parseInt(hex.slice(3, 5), 16);
+        let b = parseInt(hex.slice(5, 7), 16);
+        // Fallback nếu parse lỗi
+        if(isNaN(r)) { r=50; g=100; b=150; }
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function processData() {
+        const rawText = document.getElementById('rawInput').value;
+        const subjects = [];
+        let totalCredits = 0;
+
+        // 1. Phân tách các khối môn học
+        // Dựa vào pattern số thứ tự đầu dòng môn học: "1", "2", ... nằm riêng trên 1 dòng
+        // Regex này tìm số thứ tự đứng một mình, theo sau là Mã môn - Tên môn
+        // Lưu ý: Dữ liệu copy có thể xuống dòng lung tung, ta xử lý theo từng dòng
+        
+        const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        
+        let currentSubject = null;
+        let step = 0; // 0: tìm start, 1: tìm mã/tên, 2: tìm tín chỉ, 3: tìm lịch
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            // Pattern nhận diện dòng bắt đầu môn: Mã môn - Tên môn (VD: CO3043 - Phát triển ứd trên tbdđ)
+            const subjectHeaderRegex = /^([A-Z]{2,}\d+)\s+-\s+(.+)$/;
+            const matchHeader = line.match(subjectHeaderRegex);
+
+            if (matchHeader) {
+                // Nếu tìm thấy môn mới, lưu môn cũ (nếu có)
+                if (currentSubject) subjects.push(currentSubject);
+
+                currentSubject = {
+                    code: matchHeader[1],
+                    name: matchHeader[2],
+                    credits: 0,
+                    schedule: [] // Mảng chứa các buổi học
+                };
+                
+                // Tìm tín chỉ ở dòng kế tiếp hoặc gần đó
+                // Thường dòng sau tên môn là số tín chỉ (VD: 3.0)
+                if (i + 1 < lines.length) {
+                    const creditMatch = lines[i+1].match(/^(\d+(\.\d)?)$/);
+                    if (creditMatch) {
+                        currentSubject.credits = parseFloat(creditMatch[1]);
+                    }
+                }
+                continue;
+            }
+
+            // Pattern tìm lịch học: Bắt đầu bằng chữ "Thứ"
+            // Dạng: Thứ 4- 2 3 ... H6-210...
+            // Hoặc có thể bị tách dòng: Thứ\nTiết\n... (như mẫu 2) nhưng trong mẫu 1 là chung dòng
+            // Ta xử lý dòng chứa dữ liệu lịch: "Thứ ... Tiết ... Phòng ..."
+            
+            // Logic: Tìm dòng chứa số thứ (2-7|CN) và chuỗi tiết (các số liên tiếp)
+            // Trong dữ liệu mẫu: "Thứ 4- 2 3 - - - ... -H6-210..."
+            // Hoặc dòng chỉ có số tiết và phòng nếu cột "Thứ" bị merge (ít gặp ở text raw này)
+            
+            if (currentSubject && line.includes('Thứ')) {
+                 // Đây là dòng header bảng con, bỏ qua. Ta cần tìm dòng dữ liệu bên dưới nó.
+                 // Nhưng trong raw text, dòng dữ liệu thường có dạng: "Thứ 2" hoặc số "2" nếu copy dạng bảng
+                 continue;
+            }
+
+            // Xử lý dòng chứa dữ liệu lịch thực tế
+            // Pattern phức tạp: Tìm dòng có chứa Tiết (chuỗi số) và Phòng.
+            // Mẫu: "Thứ 4- 2 3 - ... -H6-210" -> "Thứ" có thể dính vào số
+            // Hoặc chỉ đơn giản tìm các số tiết "2 3" và phòng "H6-..."
+            
+            // Cách tiếp cận robust hơn cho BK:
+            // Tìm dòng có format tuần học: "12345678" ở cuối.
+            // Dòng đó thường chứa Thứ, Tiết, Phòng.
+            
+            // Regex detect dòng data: Bắt đầu bằng (Thứ x | CN) hoặc dính liền
+            // VD data: "Thứ 4- 2 3 ... H6-210"
+            if (currentSubject) {
+                // Regex check dòng chứa thông tin buổi học
+                // Tìm số thứ (2-7|CN), theo sau là dãy tiết, sau đó là phòng (thường có Hx- hoặc [A-Z]-)
+                const scheduleLineRegex = /(?:Thứ\s*)?([2-7]|CN).*?((?:\s*[-]\s*|\s+\d+\s+)+)(.*)/;
+                
+                // Chỉ xét dòng có độ dài nhất định và có dấu hiệu của phòng học hoặc tiết
+                // Mẹo: Dòng chứa chuỗi "1234" (tuần) thường là dòng lịch
+                const weekPattern = /[\d-]{10,}/; // Chuỗi tuần dài
+                
+                if (weekPattern.test(line)) {
+                    // Cố gắng parse Thứ, Tiết, Phòng từ dòng này
+                    let day = null;
+                    let periods = [];
+                    let room = "N/A";
+
+                    // 1. Lấy Thứ
+                    if (line.includes("Thứ 2") || line.startsWith("2")) day = 2;
+                    else if (line.includes("Thứ 3") || line.startsWith("3")) day = 3;
+                    else if (line.includes("Thứ 4") || line.startsWith("4")) day = 4;
+                    else if (line.includes("Thứ 5") || line.startsWith("5")) day = 5;
+                    else if (line.includes("Thứ 6") || line.startsWith("6")) day = 6;
+                    else if (line.includes("Thứ 7") || line.startsWith("7")) day = 7;
+                    else if (line.includes("CN") || line.includes("Chủ nhật")) day = 8;
+
+                    // 2. Lấy Tiết
+                    // Tìm các con số đứng riêng lẻ hoặc cụm "2 3" bỏ qua các số dài (như mã phòng, tuần)
+                    // Cách đơn giản cho BK: Tiết thường nằm giữa Thứ và Phòng
+                    // Format BK: Thứ 4- 2 3 - - ...
+                    // Ta sẽ extract tất cả số nhỏ (<16) trong phần đầu của chuỗi
+                    
+                    // Cắt chuỗi để tránh nhầm với tuần ở cuối
+                    let contentPart = line.substring(0, line.lastIndexOf('-')); // Bỏ phần tuần
+                    
+                    // Regex lấy các số tiết (thường là 1-2 chữ số, cách nhau bởi khoảng trắng)
+                    // Bỏ qua số đầu tiên nếu nó là số chỉ Thứ
+                    const numbers = contentPart.match(/\b\d{1,2}\b/g);
+                    
+                    if (day && numbers) {
+                        // Lọc số tiết: Là số <= 16 và không phải là số chỉ Thứ (nếu trùng)
+                        // Tuy nhiên regex trên đã lấy hết. 
+                        // Logic BK: Thứ đứng đầu, sau đó là các tiết.
+                        // VD: 4 2 3 (Thứ 4, tiết 2, 3)
+                        
+                        let tempPeriods = numbers.map(n => parseInt(n)).filter(n => n <= 16);
+                        
+                        // Nếu số đầu tiên trùng với Day, khả năng cao nó là chỉ báo Thứ, bỏ đi
+                        // Trừ khi học tiết trùng thứ (hiếm nhưng có thể, vd thứ 2 học tiết 2)
+                        // Nhưng format text thường là "Thứ 4 ...", số 4 đã được parse ở bước day.
+                        // Trong list numbers này sẽ chứa các tiết.
+                        
+                        // Lọc lại kỹ hơn: Dựa vào vị trí "-" trong chuỗi gốc
+                        // "Thứ 4- 2 3 - - ..." -> Tiết là 2, 3
+                        
+                        periods = tempPeriods.filter(p => p !== day || tempPeriods.indexOf(p) !== 0); 
+                        // (Logic trên chỉ mang tính tương đối, ta sẽ lấy tất cả số tìm được < 13 làm tiết)
+                        periods = tempPeriods.filter(p => p >= 1 && p <= 15);
+                        
+                        // Loại bỏ số Thứ ra khỏi list tiết nếu nó xuất hiện đầu tiên và text gốc có chữ "Thứ"
+                        if(line.includes("Thứ") && periods.length > 0 && periods[0] === day) {
+                            periods.shift();
+                        }
+                    }
+
+                    // 3. Lấy Phòng
+                    // Phòng thường có dạng Hx-xxx hoặc Cx-xxx
+                    const roomMatch = line.match(/([HBC]\d-\d{3,4}|[A-Z]\d{3}|ONLINE)/);
+                    if (roomMatch) {
+                        room = roomMatch[0];
+                    }
+
+                    if (day && periods.length > 0) {
+                        currentSubject.schedule.push({
+                            day: day,
+                            periods: periods,
+                            room: room
+                        });
+                    }
+                }
+            }
+        }
+        // Push môn cuối
+        if (currentSubject) subjects.push(currentSubject);
+
+        // Tính tổng
+        totalCredits = subjects.reduce((sum, sub) => sum + sub.credits, 0);
+        
+        // Render
+        renderSchedule(subjects, totalCredits);
+    }
+
+    function renderSchedule(subjects, totalCredits) {
+        const grid = document.getElementById('scheduleGrid');
+        const stats = document.getElementById('statsArea');
+        const wrapper = document.getElementById('scheduleWrapper');
+
+        // Reset Grid (Giữ lại cấu trúc row/col, xóa content cũ)
+        grid.innerHTML = '';
+        
+        // 1. Render Headers
+        // Cell góc 0
+        const corner = document.createElement('div');
+        corner.className = 'header-cell';
+        corner.innerText = 'Tiết';
+        grid.appendChild(corner);
+
+        // Header Thứ 2 -> CN
+        const days = ['Hai', 'Ba', 'Tư', 'Năm', 'Sáu', 'Bảy', 'CN'];
+        days.forEach(d => {
+            const h = document.createElement('div');
+            h.className = 'header-cell';
+            h.innerText = d;
+            grid.appendChild(h);
+        });
+
+        // 2. Render Time Column (Rows 1-16)
+        for(let i=1; i<=16; i++) {
+            const t = document.createElement('div');
+            t.className = 'time-cell';
+            t.style.gridColumn = "1 / 2";
+            t.style.gridRow = `${i + 1} / ${i + 2}`;
+            t.innerText = i;
+            grid.appendChild(t);
+            
+            // Tạo các ô trống cho lưới (để hiện border)
+            for(let d=0; d<7; d++) {
+                const c = document.createElement('div');
+                c.className = 'cell';
+                c.style.gridColumn = `${d + 2} / ${d + 3}`; // Cột 2 đến 8
+                c.style.gridRow = `${i + 1} / ${i + 2}`;
+                grid.appendChild(c);
+            }
+        }
+
+        // 3. Render Class Blocks
+        subjects.forEach(sub => {
+            const color = getColor(sub.name);
+            
+            sub.schedule.forEach(sched => {
+                // Xác định vị trí Grid
+                // Cột: Thứ 2 là cột 2. Thứ 3 là cột 3... CN (8) là cột 8.
+                const colStart = sched.day === 8 ? 8 : sched.day; 
+                const colEnd = colStart + 1;
+
+                // Dòng: Tiết bắt đầu + 1 (vì dòng 1 là header)
+                // Span: Số tiết
+                if (sched.periods.length === 0) return;
+                
+                const startPeriod = Math.min(...sched.periods);
+                const endPeriod = Math.max(...sched.periods);
+                const span = endPeriod - startPeriod + 1;
+
+                const rowStart = startPeriod + 1;
+                const rowEnd = rowStart + span;
+
+                const block = document.createElement('div');
+                block.className = 'class-block';
+                block.style.backgroundColor = color;
+                
+                // Đặt vị trí Grid
+                block.style.gridColumn = `${colStart} / ${colEnd}`;
+                block.style.gridRow = `${rowStart} / ${rowEnd}`;
+                
+                block.innerHTML = `
+                    <div class="class-info">${sub.code}</div>
+                    <div style="font-size:10px; overflow:hidden; text-overflow: ellipsis; white-space: nowrap;">${sub.name}</div>
+                    <div class="room-info">${sched.room}</div>
+                `;
+                
+                block.title = `${sub.name} (${sub.code})\nPhòng: ${sched.room}\nThứ ${sched.day}, Tiết ${sched.periods.join(', ')}`;
+
+                grid.appendChild(block);
+            });
+        });
+
+        // Update UI Info
+        stats.innerHTML = `Tổng số môn: <span style="color:var(--primary-color)">${subjects.length}</span> | Tổng tín chỉ: <span style="color:var(--primary-color)">${totalCredits}</span>`;
+        wrapper.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
