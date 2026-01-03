@@ -4,239 +4,160 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DKMH Previewer - Xem trước lịch học</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#4F46E5', // Indigo 600
+                        secondary: '#10B981', // Emerald 500
+                        background: '#F3F4F6', // Gray 100
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            padding-top: 80px;
-            display: flex;
-            flex-direction: column;
+            background-color: #F3F4F6;
+            color: #1F2937;
+            padding-top: 50px;
         }
 
-        .page-main {
-            flex: 1 0 auto;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            text-align: center;
-            color: white;
-            margin-bottom: 20px;
-            font-weight: 300;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .input-section {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-
-        .input-section h2 {
-            color: #5a67d8;
-            margin-bottom: 15px;
-            font-weight: 500;
-        }
-
-        .input-section p {
-            color: #666;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-
-        textarea {
+        /* Input Styles */
+        .modern-textarea {
             width: 100%;
-            height: 200px;
-            border: 2px solid #e2e8f0;
-            border-radius: 15px;
-            padding: 15px;
-            font-size: 14px;
+            min-height: 150px;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #E5E7EB;
+            background-color: #F9FAFB;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.875rem;
+            transition: all 0.2s;
             resize: vertical;
-            transition: border-color 0.3s ease;
         }
-
-        textarea:focus {
+        .modern-textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #6366F1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            background-color: #FFFFFF;
         }
 
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 15px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-clear {
-            background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
-            margin-left: 10px;
-        }
-
-        /* Schedule Table Styles */
-        .schedule-section {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        /* Schedule Table Styles - RETRO STYLE RESTORED */
+        .schedule-container {
             overflow-x: auto;
-        }
-
-        /* Page chrome */
-        .page-shell {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .page-main {
-            flex: 1 0 auto;
-            padding-top: 80px;
-        }
-
-        .site-footer {
-            flex-shrink: 0;
-        }
-
-        .schedule-section h2 {
-            color: #5a67d8;
-            margin-bottom: 20px;
-            font-weight: 500;
+            border-radius: 0.75rem;
+            border: 1px solid #E5E7EB;
+            background: white;
+            padding-bottom: 20px; /* Space for hover expansion */
         }
 
         .schedule-table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 4px;
-            min-width: 900px;
+            min-width: 800px;
         }
 
         .schedule-table th {
+            /* Old Gradient Header */
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 15px 10px;
-            border-radius: 10px;
             font-weight: 500;
-            font-size: 14px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            padding: 15px 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .schedule-table td {
-            background: #f7fafc;
-            padding: 8px;
-            text-align: center;
-            border-radius: 10px;
-            height: 60px;
-            vertical-align: middle;
-            position: relative;
+            vertical-align: top;
+            height: 1px;
         }
 
         .time-cell {
+            text-align: center;
+            vertical-align: middle !important;
             background: #edf2f7;
-            font-weight: 500;
             color: #4a5568;
-            font-size: 12px;
-            min-width: 80px;
+            font-size: 0.75rem;
+            border-radius: 8px;
+            padding: 4px;
+            font-weight: 600;
+            width: 80px;
         }
 
-        /* Course Cell Styles */
+        /* Course Cell - Old Logic */
         .course-cell {
-            cursor: pointer;
+            border-radius: 10px;
+            padding: 0;
+            height: 100%;
+            /* Critical for hover effect */
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             z-index: 1;
+            cursor: pointer;
         }
 
+        /* Hover Effect - Magnify */
         .course-cell:hover {
             transform: scale(1.5);
             z-index: 100;
             box-shadow: 0 15px 50px rgba(0,0,0,0.3);
         }
 
-        /* Faded style for "Sinh hoạt sinh viên" courses */
-        .course-cell.faded .course-content {
-            opacity: 0.5;
-        }
-
-        .course-cell.faded:hover .course-content {
-            opacity: 0.8;
-        }
-
         .course-content {
-            border-radius: 10px;
-            padding: 8px 5px;
             height: 100%;
+            padding: 8px 5px;
+            border-radius: 10px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            font-size: 0.8rem;
+            text-align: center;
             transition: all 0.3s ease;
+            color: white; /* Default text color for gradients */
         }
 
-        .course-code {
-            font-weight: 600;
-            font-size: 11px;
-            margin-bottom: 2px;
-        }
-
-        .course-name {
-            font-size: 10px;
-            line-height: 1.2;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-        }
-
-        .course-room {
-            font-size: 9px;
-            margin-top: 2px;
-            opacity: 0.8;
-        }
-
+        .course-code { font-weight: 600; font-size: 11px; margin-bottom: 2px; }
+        .course-name { font-size: 10px; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .course-room { margin-top: 2px; font-size: 9px; opacity: 0.9; }
+        
         /* Hover expanded info */
-        .course-cell:hover .course-content {
-            padding: 10px;
-        }
-
-        .course-cell:hover .course-code {
-            font-size: 13px;
-        }
-
-        .course-cell:hover .course-name {
-            font-size: 12px;
-        }
-
-        .course-cell:hover .course-room {
-            font-size: 11px;
-        }
-
-        .course-cell:hover .course-extra {
-            display: block;
-        }
+        .course-cell:hover .course-code { font-size: 13px; }
+        .course-cell:hover .course-name { font-size: 12px; }
+        .course-cell:hover .course-room { font-size: 11px; }
 
         .course-extra {
             display: none;
@@ -248,11 +169,11 @@
             width: 100%;
         }
 
-        .course-extra div {
-            margin: 2px 0;
+        .course-cell:hover .course-extra {
+            display: block;
         }
 
-        /* Color palette for courses */
+        /* Original Gradient Palette */
         .color-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
         .color-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
         .color-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
@@ -264,277 +185,48 @@
         .color-9 { background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%); color: #333; }
         .color-10 { background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%); color: #333; }
 
-        /* Summary section */
-        .summary {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f7fafc;
-            border-radius: 15px;
-            display: flex;
-            gap: 30px;
-            flex-wrap: wrap;
-        }
+        .faded .course-content { opacity: 0.5; }
+        .faded:hover .course-content { opacity: 0.9; }
 
-        .summary-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .summary-label {
-            color: #718096;
-            font-size: 14px;
-        }
-
-        .summary-value {
-            color: #5a67d8;
-            font-weight: 600;
-            font-size: 18px;
-        }
-
-        /* Course list */
-        .course-list {
-            margin-top: 20px;
-        }
-
-        .course-list h3 {
-            color: #5a67d8;
-            margin-bottom: 15px;
-            font-weight: 500;
-        }
-
-        .course-item {
-            display: flex;
-            align-items: center;
-            padding: 10px 15px;
-            background: #f7fafc;
-            border-radius: 10px;
-            margin-bottom: 8px;
-            transition: transform 0.2s ease;
-        }
-
-        .course-item:hover {
-            transform: translateX(5px);
-        }
-
-        .course-color-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 15px;
-        }
-
-        .course-item-info {
-            flex: 1;
-        }
-
-        .course-item-code {
-            font-weight: 600;
-            color: #4a5568;
-        }
-
-        .course-item-name {
-            font-size: 14px;
-            color: #718096;
-        }
-
-        .course-item-details {
-            font-size: 12px;
-            color: #a0aec0;
-        }
-
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            padding: 50px;
-            color: #a0aec0;
-        }
-
-        .empty-state svg {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-
-        /* Instructions */
-        .instructions {
-            background: #ebf8ff;
-            border-left: 4px solid #4299e1;
-            padding: 15px;
-            border-radius: 0 10px 10px 0;
-            margin-bottom: 15px;
-        }
-
-        .instructions h4 {
-            color: #2b6cb0;
-            margin-bottom: 8px;
-        }
-
-        .instructions ol {
-            margin-left: 20px;
-            color: #4a5568;
-            font-size: 14px;
-        }
-
-        .instructions li {
-            margin-bottom: 5px;
-        }
-
-        .instructions code {
-            background: #bee3f8;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-
-        /* Main layout with sidebar */
-        .main-layout {
-            display: flex;
-            gap: 20px;
-        }
-
-        .main-content {
-            flex: 1;
-        }
-
-        /* Preview sidebar */
-        .preview-sidebar {
-            width: 350px;
-            background: white;
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            height: fit-content;
-            position: sticky;
-            top: 20px;
-        }
-
-        .preview-sidebar h3 {
-            color: #5a67d8;
-            margin-bottom: 15px;
-            font-weight: 500;
-            font-size: 16px;
-        }
-
-        .preview-sidebar textarea {
-            height: 150px;
-            font-size: 12px;
-        }
-
-        .preview-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .btn-preview {
-            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 15px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .btn-preview:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
-        }
-
-        .btn-preview.cs1 {
-            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
-        }
-
-        .btn-preview.cs1:hover {
-            box-shadow: 0 5px 15px rgba(237, 137, 54, 0.4);
-        }
-
-        .btn-clear-preview {
-            background: linear-gradient(135deg, #a0aec0 0%, #718096 100%);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 10px;
-            font-size: 12px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-
-        /* Preview course cell styles */
-        .course-cell.preview {
-            cursor: default;
-        }
-
-        .course-cell.preview:hover {
-            transform: none;
-            box-shadow: none;
-        }
-
+        /* Preview specific */
         .course-cell.preview .course-content {
             background: rgba(156, 163, 175, 0.4) !important;
             color: #374151;
+            border: 1px dashed #666;
+        }
+        
+        .course-cell.preview:hover {
+            transform: none; /* No zoom for preview items to avoid mess */
+            box-shadow: none;
         }
 
-        .course-cell.preview .course-code {
-            font-size: 10px;
-        }
-
-        .course-cell.preview .course-name {
-            font-size: 9px;
-        }
-
-        .course-cell.preview .course-extra {
-            display: none !important;
-        }
-
-        /* Conflict cell styles */
-        .course-cell.conflict-cell {
-            padding: 0;
-        }
-
+        /* Conflict Handling */
         .conflict-container {
             display: flex;
-            width: 100%;
-            height: 100%;
+            flex-direction: column;
             gap: 2px;
+            height: 100%;
+            width: 100%;
         }
-
+        
         .conflict-half {
             flex: 1;
+            padding: 4px;
+            border-radius: 8px;
+            font-size: 0.7rem;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: 5px;
-            border-radius: 8px;
-            min-width: 0;
+            align-items: center;
+            text-align: center;
         }
 
-        .conflict-half .course-code {
-            font-size: 9px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .conflict-half .course-name {
-            font-size: 8px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .conflict-half.preview-conflict {
-            background: rgba(239, 68, 68, 0.7) !important;
-            color: white;
+        .preview-conflict {
+            background: rgba(239, 68, 68, 0.8) !important;
+            color: white !important;
             position: relative;
         }
-
-        .conflict-half.preview-conflict::before {
+        .preview-conflict::before {
             content: '⚠️';
             position: absolute;
             top: 2px;
@@ -542,106 +234,125 @@
             font-size: 10px;
         }
 
-        /* Conflict log styles */
-        .conflict-log {
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 15px;
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-
-        .conflict-log h4 {
-            color: #dc2626;
-            margin-bottom: 10px;
-            font-size: 14px;
-        }
-
-        .conflict-log ul {
-            margin: 0;
-            padding-left: 20px;
-        }
-
-        .conflict-log li {
-            color: #991b1b;
-            font-size: 13px;
-            margin-bottom: 5px;
-        }
-
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .main-layout {
-                flex-direction: column;
-            }
-
-            .preview-sidebar {
-                width: 100%;
-                position: static;
-            }
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
         }
     </style>
 </head>
-<body>
+<body class="bg-gray-100">
+
     <div id="header-placeholder"></div>
 
-    <div class="page-shell">
-        <main class="page-main">
-    
-    <div class="container">
-        <h1>📅 DKMH Previewer - Xem trước Lịch Học</h1>
-        
-        <div class="input-section">
-            <h2>📋 Bước 1: Dán thông tin lịch đã đăng ký</h2>
-            <div class="instructions">
-                <h4>Hướng dẫn:</h4>
-                <ol>
-                    <li>Mở trang đăng ký môn học (mybk.hcmut.edu.vn)</li>
-                    <li>Nhấn <code>Ctrl + A</code> để chọn tất cả nội dung</li>
-                    <li>Nhấn <code>Ctrl + C</code> để sao chép</li>
-                    <li>Dán vào ô bên dưới (<code>Ctrl + V</code>)</li>
-                    <li>Nhấn nút "Xem lịch học"</li>
-                </ol>
-            </div>
-            <textarea id="inputData" placeholder="Dán nội dung Ctrl+A từ trang đăng ký môn học vào đây..."></textarea>
-            <br>
-            <button class="btn" onclick="parseAndDisplay()">📊 Xem lịch học</button>
-            <button class="btn btn-clear" onclick="clearAll()">🗑️ Xóa tất cả</button>
-        </div>
+    <div class="page-shell max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8 ">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 tracking-tight mb-2">
+                <span class="text-indigo-600">DKMH</span> Previewer
+            </h1>
+            <p class="text-gray-500">Xem trước và sắp xếp lịch học trực quan</p>
+        </header>
 
-        <div class="main-layout">
-            <div class="main-content">
-                <div class="schedule-section" id="scheduleSection">
-                    <h2>📆 Lịch học của bạn</h2>
-                    <div id="scheduleContent">
-                        <div class="empty-state">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <p>Chưa có dữ liệu lịch học. Vui lòng dán thông tin từ trang ĐKMH.</p>
+        <!-- LAYOUT CHANGED: 4 Columns total. 1 for Input (25%), 3 for Schedule (75%) -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+            
+            <!-- LEFT COLUMN: INPUTS (1 Column ~ 25%) -->
+            <div class="lg:col-span-1 flex flex-col gap-6 sticky top-6">
+                
+                <!-- STEP 1: Registered Courses -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">1</div>
+                        <h2 class="text-lg font-semibold text-gray-800">Lịch đã đăng ký</h2>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-100 mb-2">
+                            <span class="font-semibold">Hướng dẫn:</span> Vào trang ĐKMH (mybk) &rarr; Ctrl+A &rarr; Ctrl+C &rarr; Dán vào dưới đây.
+                        </div>
+                        <textarea id="inputData" class="modern-textarea" placeholder="Dán nội dung toàn trang vào đây..."></textarea>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="parseAndDisplay()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-xl transition-colors shadow-sm shadow-indigo-200">
+                            Xem lịch
+                        </button>
+                        <button onclick="clearAll()" class="px-4 py-2.5 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors font-medium">
+                            Xóa
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Preview Courses -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">2</div>
+                        <h2 class="text-lg font-semibold text-gray-800">Preview môn mới</h2>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg border border-gray-100 mb-2">
+                            <span class="font-semibold">Mẹo:</span> Tìm kiếm môn học &rarr; Ctrl+A &rarr; Dán vào đây để xem thử có bị trùng không.
+                        </div>
+                        <textarea id="previewData" class="modern-textarea h-32" placeholder="Dán nội dung trang đăng ký môn học..."></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <button onclick="previewCourses('cs2')" class="bg-emerald-500 hover:bg-emerald-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors shadow-sm shadow-emerald-200">
+                            + Cơ sở 2
+                        </button>
+                        <button onclick="previewCourses('cs1')" class="bg-orange-500 hover:bg-orange-600 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors shadow-sm shadow-orange-200">
+                            + Cơ sở 1
+                        </button>
+                    </div>
+                    <button onclick="clearPreview()" class="w-full py-2 text-sm text-gray-400 hover:text-gray-600 transition-colors">
+                        Xóa preview
+                    </button>
+                </div>
+
+                <!-- Footer Credit (moved from bottom) -->
+                <div class="text-center text-xs text-gray-400 mt-4">
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: SCHEDULE (3 Columns ~ 75%) -->
+            <div class="lg:col-span-3">
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 min-h-[600px]">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <span>📅</span> Thời khóa biểu
+                        </h2>
+                        <div class="flex gap-2 text-xs">
+                            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-indigo-100 border border-indigo-300"></span> Đã ĐK</div>
+                            <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-gray-200 border-2 border-dashed border-gray-400"></span> Preview</div>
+                        </div>
+                    </div>
+
+                    <div id="scheduleSection">
+                        <div id="scheduleContent">
+                            <!-- Empty State -->
+                            <div class="flex flex-col items-center justify-center h-96 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50">
+                                <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <p class="text-lg font-medium">Chưa có dữ liệu</p>
+                                <p class="text-sm">Hãy thực hiện Bước 1 ở cột bên trái</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <div class="preview-sidebar">
-                <h3>🔍 Bước 2: Preview môn mới</h3>
-                <div class="instructions" style="margin-bottom: 10px; padding: 10px;">
-                    <small>Dán thông tin từ trang chọn môn học đăng ký (Ctrl+A sau khi search môn)</small>
-                </div>
-                <textarea id="previewData" placeholder="Dán nội dung Ctrl+A từ trang chọn môn học..."></textarea>
-                <div class="preview-buttons">
-                    <button class="btn-preview" onclick="previewCourses('cs2')">
-                        🏫 Preview Cơ sở 2 (L##, D2--)
-                    </button>
-                    <button class="btn-preview cs1" onclick="previewCourses('cs1')">
-                        🏫 Preview Cơ sở 1 (CC##, CH##, ...)
-                    </button>
-                </div>
-                <button class="btn-clear-preview" onclick="clearPreview()">🗑️ Xóa preview</button>
-            </div>
         </div>
     </div>
 
+    <div id="footer-placeholder"></div>
+    <script src="load-components.js"></script>
+
+    <!-- MAIN LOGIC SCRIPT (KEPT UNTOUCHED AS REQUESTED) -->
     <script>
         // Time period mapping
         const periodTimes = {
@@ -757,7 +468,7 @@
                     continue;
                 }
                 
-                // Skip header line "Thứ	Tiết	Phòng..."
+                // Skip header line "Thứ    Tiết    Phòng..."
                 if (trimmedLine.includes('Tiết') && trimmedLine.includes('Phòng') && trimmedLine.includes('Tuần học')) {
                     console.log('Skipping header line');
                     continue;
@@ -869,11 +580,12 @@
         function generateScheduleTable() {
             if (courses.length === 0) {
                 return `
-                    <div class="empty-state">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <div class="flex flex-col items-center justify-center h-96 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50">
+                        <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <p>Không tìm thấy môn học nào có lịch cụ thể. Vui lòng kiểm tra lại dữ liệu đầu vào.</p>
+                        <p class="text-lg font-medium">Không tìm thấy môn học nào</p>
+                        <p class="text-sm">Vui lòng kiểm tra lại dữ liệu đầu vào.</p>
                     </div>
                 `;
             }
@@ -896,8 +608,12 @@
                 });
             });
 
+            // Adjust min/max for better view if range is small
+            if (minPeriod > 1) minPeriod = Math.max(1, minPeriod - 1);
+            if (maxPeriod < 12) maxPeriod = Math.min(12, maxPeriod + 1);
+
             // Build the table
-            let html = `<table class="schedule-table">
+            let html = `<div class="schedule-container animate-fade-in"><table class="schedule-table">
                 <thead>
                     <tr>
                         <th>Tiết/Giờ</th>
@@ -1024,8 +740,9 @@
                 const time = periodTimes[period];
                 html += `<tr>
                     <td class="time-cell">
-                        <strong>Tiết ${period}</strong><br>
-                        <small>${time.start} - ${time.end}</small>
+                        <div class="text-xs font-bold text-gray-700">Tiết ${period}</div>
+                        <div class="text-[10px] text-gray-500">${time.start}</div>
+                        <div class="text-[10px] text-gray-500">${time.end}</div>
                     </td>`;
 
                 for (let day = 0; day < 7; day++) {
@@ -1051,7 +768,7 @@
                             // First half - the original course
                             if (cell.isPreview) {
                                 html += `
-                                        <div class="conflict-half" style="background: rgba(156, 163, 175, 0.4);">
+                                        <div class="conflict-half bg-gray-200 text-gray-700 border border-gray-300 border-dashed">
                                             <div class="course-code">${course.code}</div>
                                             <div class="course-name">${course.group}</div>
                                         </div>`;
@@ -1082,8 +799,12 @@
                             html += `
                                 <td class="course-cell preview" rowspan="${cell.rowspan}">
                                     <div class="course-content">
-                                        <div class="course-code">${course.code}</div>
-                                        <div class="course-name">${course.group}</div>
+                                        <div class="course-code text-gray-600">${course.code}</div>
+                                        <div class="course-name text-gray-500">${course.group}</div>
+                                        <div class="course-extra">
+                                            <div>⏰ ${timeRange}</div>
+                                            <div>📍 ${course.room}</div>
+                                        </div>
                                     </div>
                                 </td>`;
                         } else {
@@ -1096,10 +817,10 @@
                                         <div class="course-name">${course.name}</div>
                                         <div class="course-room">📍 ${course.room}</div>
                                         <div class="course-extra">
-                                            <div>⏰ ${timeRange}</div>
-                                            <div>📚 ${course.credits} tín chỉ</div>
-                                            <div>👥 Nhóm: ${course.group}</div>
-                                            ${course.instructor ? `<div>👨‍🏫 ${course.instructor}</div>` : ''}
+                                            <div class="flex items-center gap-1">⏰ ${timeRange}</div>
+                                            <div class="flex items-center gap-1">📚 ${course.credits} TC</div>
+                                            <div class="flex items-center gap-1">👥 Nhóm: ${course.group}</div>
+                                            ${course.instructor ? `<div class="flex items-center gap-1">👨‍🏫 ${course.instructor}</div>` : ''}
                                         </div>
                                     </div>
                                 </td>`;
@@ -1112,58 +833,69 @@
                 html += `</tr>`;
             }
 
-            html += `</tbody></table>`;
+            html += `</tbody></table></div>`;
 
-            // Summary
+            // Summary Stats
             const totalCredits = courses.reduce((sum, c) => sum + c.credits, 0);
             html += `
-                <div class="summary">
-                    <div class="summary-item">
-                        <span class="summary-label">Tổng số môn:</span>
-                        <span class="summary-value">${courses.length}</span>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 text-indigo-800">
+                        <div class="text-xs text-indigo-400 font-semibold uppercase tracking-wider">Tổng môn</div>
+                        <div class="text-2xl font-bold">${courses.length}</div>
                     </div>
-                    <div class="summary-item">
-                        <span class="summary-label">Tổng tín chỉ:</span>
-                        <span class="summary-value">${totalCredits}</span>
+                    <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-emerald-800">
+                        <div class="text-xs text-emerald-400 font-semibold uppercase tracking-wider">Tổng tín chỉ</div>
+                        <div class="text-2xl font-bold">${totalCredits}</div>
                     </div>
-                </div>
-            `;
-
-            // Course list
-            html += `
-                <div class="course-list">
-                    <h3>📚 Danh sách môn học</h3>
-                    ${courses.map((course, idx) => `
-                        <div class="course-item">
-                            <div class="course-color-dot color-${(idx % 10) + 1}"></div>
-                            <div class="course-item-info">
-                                <div class="course-item-code">${course.code} - ${course.name}</div>
-                                <div class="course-item-details">
-                                    ${course.day} | Tiết ${course.periods.join(', ')} | ${getTimeRange(course.periods)} | Phòng ${course.room} | ${course.credits} TC | Nhóm ${course.group}
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
                 </div>
             `;
             
             // Conflict log - show if there are any conflicts
             if (conflicts.length > 0) {
                 html += `
-                    <div class="conflict-log">
-                        <h4>⚠️ Cảnh báo trùng lịch (${conflicts.length})</h4>
-                        <ul>
+                    <div class="mt-6 bg-red-50 border border-red-200 rounded-xl p-4 animate-fade-in">
+                        <h4 class="text-red-700 font-bold flex items-center gap-2 mb-2">
+                            <span>⚠️</span> Phát hiện trùng lịch (${conflicts.length})
+                        </h4>
+                        <ul class="list-disc list-inside text-sm text-red-600 space-y-1">
                             ${conflicts.map(c => {
                                 const previewInfo = `${c.previewCourse.code} - ${c.previewCourse.group}`;
                                 const conflictInfo = c.conflictWith.isPreview 
                                     ? `${c.conflictWith.code} - ${c.conflictWith.group}` 
                                     : `${c.conflictWith.code} - ${c.conflictWith.name}`;
-                                return `<li>Môn preview <strong>"${previewInfo}"</strong> đang bị trùng với môn <strong>"${conflictInfo}"</strong></li>`;
+                                return `<li>Môn preview <strong>"${previewInfo}"</strong> trùng với <strong>"${conflictInfo}"</strong></li>`;
                             }).join('')}
                         </ul>
                     </div>
                 `;
             }
+
+            // Course list (Redesigned)
+            html += `
+                <div class="mt-8">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Danh sách chi tiết</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${courses.map((course, idx) => `
+                        <div class="bg-white p-3 rounded-lg border border-gray-200 shadow-sm flex items-start gap-3 hover:shadow-md transition-shadow">
+                            <div class="w-2 h-full rounded-full color-${(idx % 10) + 1} bg-current self-stretch"></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="font-bold text-sm text-gray-800 truncate">${course.code} - ${course.name}</div>
+                                <div class="text-xs text-gray-500 mt-1 space-y-0.5">
+                                    <div class="flex justify-between">
+                                        <span>${course.day}, Tiết ${course.periods.join(', ')}</span>
+                                        <span class="font-medium bg-gray-100 px-1.5 rounded text-gray-600">P. ${course.room}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span>Nhóm ${course.group}</span>
+                                        <span>${course.credits} TC</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                    </div>
+                </div>
+            `;
 
             return html;
         }
@@ -1185,11 +917,12 @@
             document.getElementById('inputData').value = '';
             courses = [];
             document.getElementById('scheduleContent').innerHTML = `
-                <div class="empty-state">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <div class="flex flex-col items-center justify-center h-96 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50">
+                    <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <p>Chưa có dữ liệu lịch học. Vui lòng dán thông tin từ trang ĐKMH.</p>
+                    <p class="text-lg font-medium">Đã xóa dữ liệu</p>
+                    <p class="text-sm">Hãy bắt đầu lại từ Bước 1</p>
                 </div>
             `;
         }
@@ -1219,7 +952,7 @@
                 if (trimmedLine.includes('Danh sách môn học đã đăng ký') || 
                     trimmedLine.includes('Môn học đã đăng ký') ||
                     trimmedLine.includes('Danh sách đã đăng ký') ||
-                    trimmedLine.includes('STT	Mã MH')) {
+                    trimmedLine.includes('STT    Mã MH')) {
                     console.log('🛑 Hit registered courses section, stopping preview parse');
                     break;
                 }
@@ -1246,26 +979,22 @@
                     continue;
                 }
                 
-                // Skip header line "Thứ	Tiết	Phòng..."
+                // Skip header line "Thứ    Tiết    Phòng..."
                 if (trimmedLine.includes('Tiết') && trimmedLine.includes('Phòng') && trimmedLine.includes('Tuần học')) {
                     continue;
                 }
                 
-                // Skip table header line "Nhóm lớp	DK/ Sĩ số..."
+                // Skip table header line "Nhóm lớp DK/ Sĩ số..."
                 if (trimmedLine.includes('Nhóm lớp') && trimmedLine.includes('Sĩ số')) {
                     continue;
                 }
                 
                 // Match group line: L01_L01, CC01_CC02, L01, CC01, A01_A01, etc.
-                // Format: GroupCode + Tab + DK/Sĩ số info
-                // Group can be with underscore (L01_L02) or without (L01)
                 const groupMatch = trimmedLine.match(/^([A-Z]\d{2}(?:_[A-Z0-9]+)?)\t/);
                 if (groupMatch && currentCourseCode) {
                     currentGroupCode = groupMatch[1];
                     
                     // Check campus filter based on the FIRST part (LT group)
-                    // CS2: starts with L or D
-                    // CS1: starts with CC, CH, A, or others
                     const ltGroup = currentGroupCode.split('_')[0];
                     const isCS2 = /^(L\d|D\d)/.test(ltGroup);
                     
@@ -1280,7 +1009,6 @@
                 }
                 
                 // Match schedule line for current group
-                // Only process if we have a valid group
                 if (currentCourseCode && currentGroupCode && isValidGroup) {
                     const firstPart = trimmedLine.split('\t')[0].trim();
                     
@@ -1380,9 +1108,5 @@
             }
         }
     </script>
-    </main>
-
-    <div id="footer-placeholder"></div>
-    <script src="load-components.js"></script>
 </body>
 </html>

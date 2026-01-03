@@ -8,45 +8,50 @@
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
 ">
     <div style="
-        max-width: 1200px;
+        max-width: 1600px;
         margin: 0 auto;
-        padding: px 10px;
-        display: flex;
+        padding: 10px 20px;
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
         align-items: center;
-        justify-content: space-between;
     ">
         <!-- Logo -->
         <a href="index.html" style="
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: -5px;
             text-decoration: none;
             color: #1a1a2e;
+            justify-self: start;
         ">
+            
             <img src="img/SuperiorHamster_icon.png" alt="Logo" style="
+                width: 90px;
                 height: 50px;
-                width: 100px;
-            ">
+                border-radius: 5px;
+                transition: transform 0.3s ease;
+            " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
             <span style="
                 font-weight: 700;
-                font-size: 15px;
+                font-size: 16px;
                 letter-spacing: -0.3px;
             ">SuperiorHamster</span>
         </a>
 
-        <!-- Nav -->
+        <!-- Nav (centered) -->
         <nav style="
             display: flex;
             align-items: center;
             gap: 8px;
+            justify-self: center;
         ">
-            <a href="index.html" style="padding: 8px 14px; text-decoration: none; color: #64748b; font-size: 13px; font-weight: 500; border-radius: 6px; transition: all 0.15s;">Trang chủ</a>
-            <a href="exam_calendar.html" style="padding: 8px 14px; text-decoration: none; color: #64748b; font-size: 13px; font-weight: 500; border-radius: 6px; transition: all 0.15s;">Lịch thi</a>
-            <a href="gpa_analyser.html" style="padding: 8px 14px; text-decoration: none; color: #64748b; font-size: 13px; font-weight: 500; border-radius: 6px; transition: all 0.15s;">GPA</a>
-            <a href="dkmh_previewer.html" style="padding: 8px 14px; text-decoration: none; color: #64748b; font-size: 13px; font-weight: 500; border-radius: 6px; transition: all 0.15s;">ĐKMH</a>
+            <a href="index.html" style="padding: 8px 14px; text-decoration: none; color: #64748b; font-size: 15px; font-weight: 500; border-radius: 6px; transition: all 0.15s;">Trang chủ</a>
+            <a href="exam_calendar.html" style="padding: 8px 14px; text-decoration: none; color: #64748b; font-size: 15px; font-weight: 500; border-radius: 6px; transition: all 0.15s;">Lịch thi</a>
+            <a href="gpa_analyser.html" style="padding: 8px 14px; text-decoration: none; color: #64748b; font-size: 15px; font-weight: 500; border-radius: 6px; transition: all 0.15s;">GPA</a>
+            <a href="dkmh_previewer.html" style="padding: 8px 14px; text-decoration: none; color: #64748b; font-size: 15px; font-weight: 500; border-radius: 6px; transition: all 0.15s;">ĐKMH</a>
         </nav>
 
         <!-- GitHub -->
@@ -54,6 +59,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            justify-self: end;
             width: 36px;
             height: 36px;
             border-radius: 8px;
@@ -65,12 +71,17 @@
             </svg>
         </a>
     </div>
+    
+    <!-- CSS cho Header Responsive -->
+    <style>
+        #site-header nav a:hover { background: rgba(0,0,0,0.04) !important; color: #1a1a2e !important; }
+        #site-header nav a.active { color: #4F46E5 !important; background: rgba(79, 70, 229, 0.05) !important; font-weight: 600 !important; }
+        #site-header a[href*="github"]:hover { background: rgba(0,0,0,0.04); color: #1a1a2e; }
+        @media (max-width: 640px) {
+            #site-header nav a { padding: 6px 10px !important; font-size: 13px !important; }
+            #site-header > div { padding: 10px 16px !important; }
+            #site-header span { font-size: 14px !important; }
+            #site-header img, #site-header div[style*="height: 40px"] { height: 32px !important; width: 32px !important; }
+        }
+    </style>
 </header>
-<style>
-    #site-header nav a:hover { background: rgba(0,0,0,0.04); color: #1a1a2e; }
-    #site-header a[href*="github"]:hover { background: rgba(0,0,0,0.04); color: #1a1a2e; }
-    @media (max-width: 640px) {
-        #site-header nav a { padding: 6px 10px; font-size: 12px; }
-        #site-header > div { padding: 10px 16px; }
-    }
-</style>

@@ -7,6 +7,16 @@
             const headerPlaceholder = document.getElementById('header-placeholder');
             if (headerPlaceholder) {
                 headerPlaceholder.innerHTML = html;
+                
+                // Highlight active nav link
+                const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+                const navLinks = document.querySelectorAll('#site-header nav a');
+                navLinks.forEach(link => {
+                    const href = link.getAttribute('href');
+                    if (href === currentPage || (currentPage === '' && href === 'index.html')) {
+                        link.classList.add('active');
+                    }
+                });
             }
         })
         .catch(error => console.error('Error loading header:', error));
