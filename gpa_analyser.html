@@ -25,10 +25,23 @@
         .dot { transition: all 0.3s ease-in-out; }
         input:checked ~ .dot { transform: translateX(100%); background-color: #10b981; }
         input:checked ~ .block { background-color: #d1fae5; }
+
+        /* Page chrome */
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding-top: 60px;
+        }
+        .page-main {
+            flex: 1 0 auto;
+        }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen pb-12">
-
+<body class="bg-slate-50 antialiased">
+    <div id="header-placeholder"></div>
+    
+    <main class="page-main">
     <div class="max-w-7xl mx-auto px-4 pt-8">
         <!-- Header -->
         <div class="text-center mb-10">
@@ -480,5 +493,35 @@
         document.getElementById('btnExportCSV').addEventListener('click', exportToCSV);
 
     </script>
+    <script>
+        // --- Header Scroll Effect Logic ---
+        const header = document.getElementById('mainHeader');
+        
+        // Hàm xử lý sự kiện cuộn
+        const handleScroll = () => {
+            if (window.scrollY > 10) {
+                // TRẠNG THÁI: Đã cuộn xuống
+                // 1. Xóa hiệu ứng kính mờ và viền xám nhẹ
+                header.classList.remove('glass-morphism', 'border-slate-200');
+                
+                // 2. Thêm nền trắng đặc và đổ bóng đậm hơn
+                header.classList.add('bg-white', 'shadow-md');
+            } else {
+                // TRẠNG THÁI: Ở đầu trang
+                // 1. Trả lại hiệu ứng kính mờ và viền
+                header.classList.add('glass-morphism', 'border-slate-200');
+                
+                // 2. Xóa nền trắng đặc và bóng đậm
+                header.classList.remove('bg-white', 'shadow-md');
+            }
+        };
+
+        // Lắng nghe sự kiện scroll
+        window.addEventListener('scroll', handleScroll);
+    </script>
+    </main>
+
+    <div id="footer-placeholder"></div>
+    <script src="load-components.js"></script>
 </body>
 </html>

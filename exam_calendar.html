@@ -384,12 +384,29 @@
             color: #78350f;
             border-left: 3px solid #f59e0b;
         }
+
+        /* Page chrome */
+        .page-shell {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-main {
+            flex: 1 0 auto;
+            padding-top: 80px;
+            padding-bottom: 40px;
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen py-12 px-4 antialiased">
 
-    <!-- Phần tử chứa toàn bộ ứng dụng -->
-    <div class="w-full max-w-5xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+<body class="bg-gray-100 antialiased">
+    <div id="header-placeholder"></div>
+
+    <div class="page-shell">
+        <main class="page-main px-4">
+            <!-- Phần tử chứa toàn bộ ứng dụng -->
+            <div class="w-full max-w-5xl mx-auto bg-white p-8 rounded-xl shadow-lg">
         
         <!-- Tiêu đề -->
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
@@ -553,8 +570,13 @@
             </div>
         </div>
 
+            </div>
+        </main>
+
+        <div id="footer-placeholder"></div>
     </div>
 
+    <script src="load-components.js"></script>
     <script>
         // Lấy các phần tử DOM
         const rawTextInput = document.getElementById('rawTextInput');
@@ -1420,4 +1442,4 @@
 
     </script>
 </body>
-</html>
+</html>     
