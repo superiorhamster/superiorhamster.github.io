@@ -75,15 +75,28 @@
                 <div class="glass-morphism p-6 rounded-2xl shadow-sm border border-slate-200">
                     <label class="block text-sm font-semibold text-slate-700 mb-4">2. Thêm môn học dự kiến</label>
                     <div class="space-y-3">
-                        <!-- Dropdown to select from pending courses -->
-                        <div class="relative">
-                            <select id="pendingCourseSelect" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer">
-                                <option value="">-- Chọn môn từ CTĐT --</option>
-                            </select>
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <!-- Searchable dropdown to select from pending courses -->
+                        <div class="relative" id="courseSearchContainer">
+                            <div class="relative">
+                                <input type="text" id="courseSearchInput" 
+                                    class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500 pr-10"
+                                    placeholder="🔍 Tìm môn học (tên hoặc mã)..."
+                                    autocomplete="off">
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                                    <button type="button" id="clearSearchBtn" class="text-slate-400 hover:text-slate-600 hidden">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Dropdown results -->
+                            <div id="courseSearchResults" class="absolute z-20 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto hidden custom-scrollbar">
+                                <!-- Results will be populated here -->
                             </div>
                         </div>
+                        <!-- Hidden select for compatibility -->
+                        <select id="pendingCourseSelect" class="hidden">
+                            <option value="">-- Chọn môn từ CTĐT --</option>
+                        </select>
                         <!-- Display selected course info -->
                         <div id="selectedCourseInfo" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-3">
                             <div class="flex justify-between items-center">
@@ -348,47 +361,52 @@
             const pending = [];
             const groups = [];
             
-            // Parse course groups first: "Tên nhóm X/Y Khối kiến thức Bắt buộc/Tự chọn"
-            // Pattern: Tên nhóm (không bắt đầu bằng số) + X/Y + Khối kiến thức
-            const groupPattern = /^([^\d\n][^\n]*?)\s+(\d+)\/(\d+)\s+Khối kiến thức\s*(Bắt buộc|Tự chọn)/gm;
-            let groupMatch;
-            while ((groupMatch = groupPattern.exec(text)) !== null) {
-                groups.push({
-                    id: 'grp-' + Math.random().toString(36).substr(2, 9),
-                    name: groupMatch[1].trim(),
-                    earned: parseInt(groupMatch[2]),
-                    required: parseInt(groupMatch[3]),
-                    type: groupMatch[4], // Bắt buộc / Tự chọn
-                    remaining: parseInt(groupMatch[3]) - parseInt(groupMatch[2])
-                });
-            }
-            courseGroups = groups;
+            // Split text into lines for sequential parsing
+            const lines = text.split('\n');
+            let currentGroupName = null;
             
-            // Format: STT | Mã MH | Tên môn học | Điểm số | Điểm chữ | Tín chỉ | Đạt | Ghi chú
-            // Điểm số: số thực (6.4), 12 (miễn), 21 (đạt), hoặc -- (chưa học)
-            // Điểm chữ: A+, A, B+, B, C+, C, D+, D, F hoặc --
-            // Mã môn có thể có khoảng trắng ở đầu
-            const rowPattern = /(\d+)\s+([A-Z]{2,}\d{4})\s+(.+?)\s+(\d+(?:\.\d+)?|--)\s+([A-F][+]?|--)\s+(\d+)/g;
+            // Patterns
+            const groupPattern = /^([^\d\n][^\n]*?)\s+(\d+)\/(\d+)\s+Khối kiến thức\s*(Bắt buộc|Tự chọn)/;
+            const rowPattern = /(\d+)\s+([A-Z]{2,}\d{4})\s+(.+?)\s+(\d+(?:\.\d+)?|--)\s+([A-F][+]?|--)\s+(\d+)/;
             
-            let match;
-            while ((match = rowPattern.exec(text)) !== null) {
-                const courseCode = match[2].trim();
-                const name = match[3].trim();
-                let score10Str = match[4];
-                let gradeLetterStr = match[5];
-                const credits = parseInt(match[6]);
-
-                // Môn chưa học (--) -> thêm vào pending
-                if (score10Str === '--' && gradeLetterStr === '--') {
-                    pending.push({
-                        id: 'pend-' + Math.random().toString(36).substr(2, 9),
-                        courseCode,
-                        name,
-                        credits,
-                        type: 'pending'
+            // Parse line by line to track which group each course belongs to
+            lines.forEach(line => {
+                // Check if this line is a group header
+                const groupMatch = line.match(groupPattern);
+                if (groupMatch) {
+                    currentGroupName = groupMatch[1].trim();
+                    groups.push({
+                        id: 'grp-' + Math.random().toString(36).substr(2, 9),
+                        name: currentGroupName,
+                        earned: parseInt(groupMatch[2]),
+                        required: parseInt(groupMatch[3]),
+                        type: groupMatch[4], // Bắt buộc / Tự chọn
+                        remaining: parseInt(groupMatch[3]) - parseInt(groupMatch[2])
                     });
-                    continue;
+                    return;
                 }
+                
+                // Check if this line is a course row
+                const match = line.match(rowPattern);
+                if (match) {
+                    const courseCode = match[2].trim();
+                    const name = match[3].trim();
+                    let score10Str = match[4];
+                    let gradeLetterStr = match[5];
+                    const credits = parseInt(match[6]);
+
+                    // Môn chưa học (--) -> thêm vào pending
+                    if (score10Str === '--' && gradeLetterStr === '--') {
+                        pending.push({
+                            id: 'pend-' + Math.random().toString(36).substr(2, 9),
+                            courseCode,
+                            name,
+                            credits,
+                            groupName: currentGroupName, // Track which group this course belongs to
+                            type: 'pending'
+                        });
+                        return;
+                    }
 
                 let score10 = null;
                 let gradeLetter = null;
@@ -414,18 +432,22 @@
                     }
                 }
 
-                courses.push({
-                    id: 'ext-' + Math.random().toString(36).substr(2, 9),
-                    courseCode,
-                    name,
-                    credits,
-                    score10,
-                    gradeLetter,
-                    score4,
-                    type: 'extracted',
-                    hidden: false
-                });
-            }
+                    courses.push({
+                        id: 'ext-' + Math.random().toString(36).substr(2, 9),
+                        courseCode,
+                        name,
+                        credits,
+                        score10,
+                        gradeLetter,
+                        score4,
+                        groupName: currentGroupName, // Track which group this course belongs to
+                        type: 'extracted',
+                        hidden: false
+                    });
+                }
+            });
+            
+            courseGroups = groups;
             
             // Store pending courses globally
             pendingCourses = pending;
@@ -678,7 +700,7 @@
             updatePendingCourseDropdown();
         });
 
-        // Update pending course dropdown
+        // Update pending course dropdown (for hidden select compatibility)
         function updatePendingCourseDropdown() {
             const select = document.getElementById('pendingCourseSelect');
             const btn = document.getElementById('btnAddManual');
@@ -700,9 +722,276 @@
                 option.dataset.credits = c.credits;
                 select.appendChild(option);
             });
+            
+            // Clear search input when courses are updated
+            document.getElementById('courseSearchInput').value = '';
+            document.getElementById('courseSearchResults').classList.add('hidden');
         }
 
-        // Handle dropdown selection change
+        // ===== COURSE SEARCH FUNCTIONALITY =====
+        let selectedCourseFromSearch = null;
+        
+        // Normalize Vietnamese text (remove diacritics)
+        function normalizeVietnamese(str) {
+            return str.normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+                .toLowerCase();
+        }
+        
+        // Calculate relevance score for search ranking
+        function calculateRelevance(course, keywords) {
+            let score = 0;
+            const nameNorm = normalizeVietnamese(course.name);
+            const codeNorm = normalizeVietnamese(course.courseCode);
+            const nameLower = course.name.toLowerCase();
+            const codeLower = course.courseCode.toLowerCase();
+            
+            keywords.forEach(keyword => {
+                const keyNorm = normalizeVietnamese(keyword);
+                const keyLower = keyword.toLowerCase();
+                
+                // Exact match in code (highest priority)
+                if (codeLower.includes(keyLower)) {
+                    score += 100;
+                    if (codeLower.startsWith(keyLower)) score += 50; // Starts with bonus
+                }
+                // Exact match in name
+                if (nameLower.includes(keyLower)) {
+                    score += 50;
+                    if (nameLower.startsWith(keyLower)) score += 25; // Starts with bonus
+                    // Word boundary match (e.g., "lap" matches "Lập trình")
+                    if (nameLower.split(/\s+/).some(w => w.startsWith(keyLower))) score += 20;
+                }
+                // Normalized match (no diacritics) - for Vietnamese search
+                if (codeNorm.includes(keyNorm) && !codeLower.includes(keyLower)) {
+                    score += 40;
+                }
+                if (nameNorm.includes(keyNorm) && !nameLower.includes(keyLower)) {
+                    score += 30;
+                    if (nameNorm.split(/\s+/).some(w => w.startsWith(keyNorm))) score += 15;
+                }
+            });
+            
+            return score;
+        }
+        
+        // Highlight matched keywords in text
+        function highlightMatches(text, keywords) {
+            if (!keywords.length) return text;
+            
+            let result = text;
+            const textNorm = normalizeVietnamese(text);
+            
+            keywords.forEach(keyword => {
+                const keyNorm = normalizeVietnamese(keyword);
+                const keyLower = keyword.toLowerCase();
+                
+                // Find all positions to highlight
+                let pos = 0;
+                while (pos < result.length) {
+                    const checkText = result.toLowerCase();
+                    const checkNorm = normalizeVietnamese(result);
+                    
+                    // Try exact match first
+                    let idx = checkText.indexOf(keyLower, pos);
+                    if (idx === -1) {
+                        // Try normalized match
+                        idx = checkNorm.indexOf(keyNorm, pos);
+                    }
+                    
+                    if (idx !== -1 && idx < result.length) {
+                        // Find the actual matched text length
+                        let matchLen = keyword.length;
+                        // Adjust for Vietnamese characters
+                        let actualMatch = result.substr(idx, matchLen);
+                        while (matchLen < result.length - idx && 
+                               normalizeVietnamese(result.substr(idx, matchLen + 1)).length <= keyNorm.length + 1) {
+                            matchLen++;
+                            actualMatch = result.substr(idx, matchLen);
+                            if (normalizeVietnamese(actualMatch) === keyNorm || 
+                                normalizeVietnamese(actualMatch).startsWith(keyNorm + ' ') ||
+                                normalizeVietnamese(actualMatch).endsWith(' ' + keyNorm)) {
+                                break;
+                            }
+                        }
+                        
+                        const before = result.substring(0, idx);
+                        const match = result.substring(idx, idx + matchLen);
+                        const after = result.substring(idx + matchLen);
+                        
+                        if (!before.endsWith('<mark class="bg-yellow-200 rounded px-0.5">')) {
+                            result = before + '<mark class="bg-yellow-200 rounded px-0.5">' + match + '</mark>' + after;
+                            pos = idx + match.length + 50; // Skip past the mark tags
+                        } else {
+                            pos = idx + matchLen;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            });
+            
+            return result;
+        }
+        
+        function renderSearchResults(query = '') {
+            const resultsDiv = document.getElementById('courseSearchResults');
+            const searchTrimmed = query.trim();
+            
+            // Split query into keywords (Google-style: each word is a separate keyword)
+            const keywords = searchTrimmed.split(/\s+/).filter(k => k.length > 0);
+            
+            if (keywords.length === 0) {
+                // Show all courses if no search query
+                if (pendingCourses.length === 0) {
+                    resultsDiv.innerHTML = `
+                        <div class="px-4 py-3 text-sm text-slate-400 italic text-center">
+                            Chưa có dữ liệu môn học
+                        </div>
+                    `;
+                } else {
+                    // Show first 10 courses when no query
+                    const displayCourses = pendingCourses.slice(0, 10);
+                    resultsDiv.innerHTML = displayCourses.map(c => `
+                        <div class="course-search-item px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors"
+                             data-id="${c.id}" data-name="${c.name}" data-code="${c.courseCode}" data-credits="${c.credits}">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="text-xs font-mono text-emerald-600">${c.courseCode}</span>
+                                    <span class="text-sm text-slate-700 ml-2">${c.name}</span>
+                                </div>
+                                <span class="text-xs font-semibold text-slate-500">${c.credits} TC</span>
+                            </div>
+                        </div>
+                    `).join('') + (pendingCourses.length > 10 ? `
+                        <div class="px-4 py-2 text-xs text-slate-400 text-center border-t border-slate-100">
+                            Còn ${pendingCourses.length - 10} môn khác... Gõ để tìm kiếm
+                        </div>
+                    ` : '');
+                }
+                resultsDiv.classList.remove('hidden');
+                bindSearchResultEvents();
+                return;
+            }
+            
+            // Calculate relevance for each course
+            let scoredCourses = pendingCourses.map(c => ({
+                course: c,
+                score: calculateRelevance(c, keywords)
+            }));
+            
+            // Filter courses with score > 0 and sort by relevance
+            scoredCourses = scoredCourses
+                .filter(sc => sc.score > 0)
+                .sort((a, b) => b.score - a.score);
+            
+            if (scoredCourses.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="px-4 py-3 text-sm text-slate-400 italic text-center">
+                        <p>Không tìm thấy môn học</p>
+                        <p class="text-xs mt-1">Thử: tên môn, mã môn, hoặc không dấu</p>
+                    </div>
+                `;
+                resultsDiv.classList.remove('hidden');
+                return;
+            }
+            
+            // Render results with highlighted matches
+            resultsDiv.innerHTML = scoredCourses.map(sc => {
+                const c = sc.course;
+                const highlightedCode = highlightMatches(c.courseCode, keywords);
+                const highlightedName = highlightMatches(c.name, keywords);
+                
+                return `
+                    <div class="course-search-item px-4 py-2 hover:bg-emerald-50 cursor-pointer border-b border-slate-100 last:border-b-0 transition-colors"
+                         data-id="${c.id}" data-name="${c.name}" data-code="${c.courseCode}" data-credits="${c.credits}">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="text-xs font-mono text-emerald-600">${highlightedCode}</span>
+                                <span class="text-sm text-slate-700 ml-2">${highlightedName}</span>
+                            </div>
+                            <span class="text-xs font-semibold text-slate-500">${c.credits} TC</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            resultsDiv.classList.remove('hidden');
+            bindSearchResultEvents();
+        }
+        
+        function bindSearchResultEvents() {
+            document.getElementById('courseSearchResults').querySelectorAll('.course-search-item').forEach(item => {
+                item.addEventListener('click', () => selectCourseFromSearch(item));
+            });
+        }
+        
+        function selectCourseFromSearch(item) {
+            const id = item.dataset.id;
+            const name = item.dataset.name;
+            const code = item.dataset.code;
+            const credits = item.dataset.credits;
+            
+            // Update hidden select
+            const select = document.getElementById('pendingCourseSelect');
+            select.value = id;
+            
+            // Store selected course
+            selectedCourseFromSearch = { id, name, code, credits };
+            
+            // Update UI
+            document.getElementById('courseSearchInput').value = `${code} - ${name}`;
+            document.getElementById('selectedCourseName').textContent = name;
+            document.getElementById('selectedCourseCode').textContent = code;
+            document.getElementById('selectedCourseCredits').textContent = credits + ' TC';
+            document.getElementById('selectedCourseInfo').classList.remove('hidden');
+            document.getElementById('btnAddManual').disabled = false;
+            document.getElementById('courseSearchResults').classList.add('hidden');
+            document.getElementById('clearSearchBtn').classList.remove('hidden');
+        }
+        
+        function clearCourseSearch() {
+            selectedCourseFromSearch = null;
+            document.getElementById('courseSearchInput').value = '';
+            document.getElementById('pendingCourseSelect').value = '';
+            document.getElementById('selectedCourseInfo').classList.add('hidden');
+            document.getElementById('btnAddManual').disabled = true;
+            document.getElementById('courseSearchResults').classList.add('hidden');
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+        }
+        
+        // Search input event listeners
+        document.getElementById('courseSearchInput').addEventListener('input', (e) => {
+            const query = e.target.value;
+            document.getElementById('clearSearchBtn').classList.toggle('hidden', !query);
+            
+            // If user is typing, clear current selection
+            if (selectedCourseFromSearch && query !== `${selectedCourseFromSearch.code} - ${selectedCourseFromSearch.name}`) {
+                selectedCourseFromSearch = null;
+                document.getElementById('pendingCourseSelect').value = '';
+                document.getElementById('selectedCourseInfo').classList.add('hidden');
+                document.getElementById('btnAddManual').disabled = true;
+            }
+            
+            renderSearchResults(query);
+        });
+        
+        document.getElementById('courseSearchInput').addEventListener('focus', () => {
+            renderSearchResults(document.getElementById('courseSearchInput').value);
+        });
+        
+        document.getElementById('clearSearchBtn').addEventListener('click', clearCourseSearch);
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const container = document.getElementById('courseSearchContainer');
+            if (!container.contains(e.target)) {
+                document.getElementById('courseSearchResults').classList.add('hidden');
+            }
+        });
+
+        // Handle dropdown selection change (keep for compatibility)
         document.getElementById('pendingCourseSelect').addEventListener('change', (e) => {
             const selectedOption = e.target.selectedOptions[0];
             const infoDiv = document.getElementById('selectedCourseInfo');
@@ -745,6 +1034,7 @@
                 score10: score,
                 gradeLetter: getGradeLetter(score),
                 score4: calculateScore4(score, null),
+                groupName: pendingCourse.groupName, // Keep track of original group
                 type: 'manual'
             });
             
@@ -757,11 +1047,12 @@
             updatePendingCoursesUI();
             updatePendingCourseDropdown();
             
-            // Reset form
+            // Reset form and clear search
             select.value = '';
             document.getElementById('manualScore').value = '';
             document.getElementById('selectedCourseInfo').classList.add('hidden');
             document.getElementById('btnAddManual').disabled = true;
+            clearCourseSearch();
             
             // Recalculate GPA target if set
             if (currentTargetGPA) calculateGPATarget(currentTargetGPA);
@@ -915,44 +1206,78 @@
                 .filter(c => c.isFreeElective && !c.hidden)
                 .reduce((sum, c) => sum + c.credits, 0);
             
+            // Calculate total credits from manual courses that came from CTĐT (pending courses)
+            // Group them by their groupName for per-group display
+            const manualCreditsByGroup = {};
+            manualCourses.filter(c => c.courseCode && !c.isFreeElective && !c.hidden).forEach(c => {
+                if (c.groupName) {
+                    manualCreditsByGroup[c.groupName] = (manualCreditsByGroup[c.groupName] || 0) + c.credits;
+                }
+            });
+            
+            // Total manual CTĐT credits
+            const manualCtdtCredits = Object.values(manualCreditsByGroup).reduce((sum, v) => sum + v, 0);
+            
             // Calculate totals
             let totalEarned = 0;
             let totalRequired = 0;
             
             courseGroups.forEach(g => {
+                // Get planned credits for this specific group
+                const plannedCreditsForGroup = manualCreditsByGroup[g.name] || 0;
+                
                 // Add free elective credits to "Tự chọn bổ sung / tự do" group
                 let adjustedEarned = g.earned;
+                let plannedDisplay = plannedCreditsForGroup;
                 let isFreeElectiveGroup = g.name.toLowerCase().includes('tự do') || 
                                           g.name.toLowerCase().includes('bổ sung');
                 
                 if (isFreeElectiveGroup) {
-                    adjustedEarned = Math.min(g.required, g.earned + freeElectiveCredits);
+                    // For free elective group, add both planned CTĐT and free elective courses
+                    plannedDisplay = plannedCreditsForGroup + freeElectiveCredits;
                 }
                 
-                totalEarned += adjustedEarned;
+                // Total with planned courses
+                const totalWithPlanned = Math.min(g.required, g.earned + plannedDisplay);
+                
+                // Add to totals (using total with planned for progress tracking)
+                totalEarned += g.earned; // Base earned (without planned)
                 totalRequired += g.required;
                 
-                const remaining = g.required - adjustedEarned;
+                // For display: show both actual earned and planned
+                const displayEarned = totalWithPlanned;
+                const remaining = g.required - displayEarned;
                 const isComplete = remaining <= 0;
-                const progressPercent = Math.min(100, (adjustedEarned / g.required) * 100);
+                const progressPercent = Math.min(100, (displayEarned / g.required) * 100);
+                
+                // Calculate actual progress vs planned progress for visual distinction
+                const actualProgressPercent = Math.min(100, (g.earned / g.required) * 100);
                 
                 const card = document.createElement('div');
                 card.className = `p-3 rounded-lg border ${isComplete ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'}`;
                 
-                // Show additional info for free elective group
-                const freeElectiveInfo = isFreeElectiveGroup && freeElectiveCredits > 0 
-                    ? `<span class="text-[10px] text-amber-600 ml-1">(+${freeElectiveCredits} TC tự do)</span>` 
-                    : '';
+                // Show planned credits info with different color
+                let creditsDisplay = '';
+                if (plannedDisplay > 0) {
+                    creditsDisplay = `<span class="text-xs">
+                        <span class="font-bold ${isComplete ? 'text-emerald-600' : 'text-slate-600'}">${g.earned}</span>
+                        <span class="text-amber-500 font-bold">+${plannedDisplay}</span>
+                        <span class="${isComplete ? 'text-emerald-600' : 'text-slate-600'}">/${g.required}</span>
+                    </span>`;
+                } else {
+                    creditsDisplay = `<span class="text-xs font-bold ${isComplete ? 'text-emerald-600' : 'text-slate-600'}">${g.earned}/${g.required}</span>`;
+                }
                 
                 card.innerHTML = `
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-xs font-medium ${isComplete ? 'text-emerald-700' : 'text-slate-700'} truncate max-w-[180px]" title="${g.name}">
                             ${isComplete ? '✅' : '📚'} ${g.name}
                         </span>
-                        <span class="text-xs font-bold ${isComplete ? 'text-emerald-600' : 'text-slate-600'}">${adjustedEarned}/${g.required}${freeElectiveInfo}</span>
+                        ${creditsDisplay}
                     </div>
-                    <div class="w-full bg-slate-200 rounded-full h-1.5">
-                        <div class="h-1.5 rounded-full ${isComplete ? 'bg-emerald-500' : 'bg-blue-500'}" style="width: ${progressPercent}%"></div>
+                    <div class="w-full bg-slate-200 rounded-full h-1.5 relative overflow-hidden">
+                        <div class="absolute h-1.5 rounded-full ${isComplete ? 'bg-emerald-500' : 'bg-blue-500'}" style="width: ${actualProgressPercent}%"></div>
+                        ${plannedDisplay > 0 ? `<div class="absolute h-1.5 rounded-full bg-amber-400 opacity-70" style="left: ${actualProgressPercent}%; width: ${progressPercent - actualProgressPercent}%"></div>` : ''}
                     </div>
                     <div class="flex justify-between mt-1">
                         <span class="text-[10px] ${g.type === 'Bắt buộc' ? 'text-red-500' : 'text-blue-500'}">${g.type}</span>
@@ -964,19 +1289,41 @@
                 container.appendChild(card);
             });
             
+            // Add manual CTĐT credits + free elective credits to total (planned courses that will be earned)
+            const totalPlannedCredits = manualCtdtCredits + freeElectiveCredits;
+            const adjustedTotalEarned = totalEarned + totalPlannedCredits;
+            
             // Add total summary card
             const totalCard = document.createElement('div');
-            const totalRemaining = totalRequired - totalEarned;
+            const totalRemaining = totalRequired - adjustedTotalEarned;
             totalCard.className = 'p-3 rounded-lg border-2 border-indigo-300 bg-indigo-50 md:col-span-2';
+            
+            // Calculate progress percentages for 2-color bar
+            const actualTotalProgress = Math.min(100, (totalEarned / totalRequired) * 100);
+            const totalProgress = Math.min(100, (adjustedTotalEarned / totalRequired) * 100);
+            
+            // Show breakdown with different colors if there are planned courses
+            let totalCreditsDisplay = '';
+            if (totalPlannedCredits > 0) {
+                totalCreditsDisplay = `
+                    <span class="text-sm font-bold text-indigo-700">${totalEarned}</span>
+                    <span class="text-sm font-bold text-amber-500">+${totalPlannedCredits}</span>
+                    <span class="text-sm font-bold text-indigo-700">/${totalRequired} TC</span>
+                `;
+            } else {
+                totalCreditsDisplay = `<span class="text-sm font-bold text-indigo-700">${totalEarned}/${totalRequired} TC</span>`;
+            }
+            
             totalCard.innerHTML = `
                 <div class="flex items-center justify-between">
                     <span class="text-sm font-bold text-indigo-700">📊 TỔNG CỘNG</span>
-                    <span class="text-sm font-bold text-indigo-700">${totalEarned}/${totalRequired} TC</span>
+                    <span>${totalCreditsDisplay}</span>
                 </div>
-                <div class="w-full bg-indigo-200 rounded-full h-2 mt-2">
-                    <div class="h-2 rounded-full bg-indigo-500" style="width: ${Math.min(100, (totalEarned / totalRequired) * 100)}%"></div>
+                <div class="w-full bg-indigo-200 rounded-full h-2 mt-2 relative overflow-hidden">
+                    <div class="absolute h-2 rounded-full bg-indigo-500" style="width: ${actualTotalProgress}%"></div>
+                    ${totalPlannedCredits > 0 ? `<div class="absolute h-2 rounded-full bg-amber-400 opacity-70" style="left: ${actualTotalProgress}%; width: ${totalProgress - actualTotalProgress}%"></div>` : ''}
                 </div>
-                <p class="text-xs text-indigo-600 mt-1 text-center">Còn <b>${totalRemaining}</b> tín chỉ nữa để hoàn thành CTĐT</p>
+                <p class="text-xs text-indigo-600 mt-1 text-center">Còn <b>${Math.max(0, totalRemaining)}</b> tín chỉ nữa để hoàn thành CTĐT</p>
             `;
             container.appendChild(totalCard);
         }
@@ -1201,6 +1548,345 @@
             }
             
             messageDiv.innerHTML = message;
+            
+            // === PHÂN TÍCH GPA THEO NHÓM TÍN CHỈ ===
+            if (requiredAvg4 > 0 && requiredAvg4 <= 4.0) {
+                const creditGroupAnalysis = generateCreditGroupAnalysis(selectedPending, requiredAvg4, pendingCreditsSelected);
+                messageDiv.innerHTML += creditGroupAnalysis;
+            }
+        }
+        
+        // Generate analysis of GPA needed per credit group
+        function generateCreditGroupAnalysis(selectedCourses, requiredAvg, totalCredits) {
+            if (selectedCourses.length === 0) return '';
+            
+            const gradeOptions = [
+                { grade: 4.0, name: 'A', color: 'emerald', bgClass: 'bg-emerald-100', borderClass: 'border-emerald-300', textClass: 'text-emerald-700' },
+                { grade: 3.5, name: 'B+', color: 'blue', bgClass: 'bg-blue-100', borderClass: 'border-blue-300', textClass: 'text-blue-700' },
+                { grade: 3.0, name: 'B', color: 'cyan', bgClass: 'bg-cyan-100', borderClass: 'border-cyan-300', textClass: 'text-cyan-700' },
+                { grade: 2.5, name: 'C+', color: 'yellow', bgClass: 'bg-yellow-100', borderClass: 'border-yellow-300', textClass: 'text-yellow-700' },
+                { grade: 2.0, name: 'C', color: 'orange', bgClass: 'bg-orange-100', borderClass: 'border-orange-300', textClass: 'text-orange-700' }
+            ];
+            
+            // Store in window for access by drag handlers
+            window.gpaPlannerState = {
+                courses: selectedCourses.map(c => ({
+                    ...c,
+                    assignedGrade: 3.5 // Default to B+
+                })),
+                requiredAvg: requiredAvg,
+                totalCredits: totalCredits,
+                gradeOptions: gradeOptions
+            };
+            
+            let html = `
+                <div class="mt-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
+                    <h4 class="font-bold text-purple-800 mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
+                        🎯 Lập kế hoạch điểm số (Kéo thả)
+                    </h4>
+                    
+                    <!-- GPA Progress Bar -->
+                    <div class="mb-4 p-3 bg-white rounded-lg border border-purple-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-purple-700">GPA Dự kiến:</span>
+                            <div class="flex items-center gap-2">
+                                <span id="plannedGpaValue" class="text-lg font-bold text-purple-700">3.50</span>
+                                <span class="text-sm text-slate-500">/ Cần ≥ ${requiredAvg.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-3 relative overflow-hidden">
+                            <div id="plannedGpaBar" class="h-3 rounded-full bg-emerald-500 transition-all duration-300" style="width: 87.5%"></div>
+                            <div class="absolute top-0 h-3 w-0.5 bg-red-500" style="left: ${(requiredAvg / 4) * 100}%" title="Mục tiêu: ${requiredAvg.toFixed(2)}"></div>
+                        </div>
+                        <div id="plannedGpaStatus" class="mt-2 text-center text-sm font-medium text-emerald-600">
+                            ✓ Đạt mục tiêu!
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="mb-3 flex flex-wrap gap-2">
+                        <button onclick="setAllCoursesToGrade(4.0)" class="px-2 py-1 text-xs bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition">Tất cả → A</button>
+                        <button onclick="setAllCoursesToGrade(3.5)" class="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition">Tất cả → B+</button>
+                        <button onclick="setAllCoursesToGrade(3.0)" class="px-2 py-1 text-xs bg-cyan-100 text-cyan-700 rounded hover:bg-cyan-200 transition">Tất cả → B</button>
+                        <button onclick="autoDistributeGrades()" class="px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition">🎲 Tự động phân bổ</button>
+                    </div>
+                    
+                    <!-- Drag & Drop Columns -->
+                    <div class="grid grid-cols-5 gap-2" id="gradeColumnsContainer">
+                        ${gradeOptions.map(opt => `
+                            <div class="flex flex-col">
+                                <div class="text-center py-2 ${opt.bgClass} ${opt.borderClass} border rounded-t-lg">
+                                    <div class="font-bold ${opt.textClass}">${opt.name}</div>
+                                    <div class="text-xs ${opt.textClass}">${opt.grade.toFixed(1)}</div>
+                                </div>
+                                <div 
+                                    class="grade-column min-h-[150px] p-1 ${opt.bgClass} bg-opacity-30 border ${opt.borderClass} border-t-0 rounded-b-lg flex flex-col gap-1 transition-all"
+                                    data-grade="${opt.grade}"
+                                    ondragover="handleDragOver(event)"
+                                    ondragleave="handleDragLeave(event)"
+                                    ondrop="handleDrop(event)"
+                                >
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <!-- Summary -->
+                    <div class="mt-3 p-2 bg-white rounded-lg border border-purple-100">
+                        <div id="gradeSummary" class="text-xs text-slate-600 flex flex-wrap gap-2 justify-center">
+                        </div>
+                    </div>
+                    
+                    <p class="text-xs text-slate-500 mt-3 italic text-center">
+                        💡 Kéo thả các môn học giữa các cột để lập kế hoạch điểm số
+                    </p>
+                </div>
+            `;
+            
+            // Use setTimeout to render course cards after DOM is ready
+            setTimeout(() => {
+                initializeGradePlanner();
+            }, 0);
+            
+            return html;
+        }
+        
+        // Initialize the grade planner with course cards
+        function initializeGradePlanner() {
+            const state = window.gpaPlannerState;
+            if (!state) return;
+            
+            // Place all courses in B+ column initially
+            const bPlusColumn = document.querySelector('.grade-column[data-grade="3.5"]');
+            if (!bPlusColumn) return;
+            
+            state.courses.forEach((course, index) => {
+                const card = createCourseCard(course, index);
+                bPlusColumn.appendChild(card);
+            });
+            
+            updatePlannedGPA();
+        }
+        
+        // Create a draggable course card
+        function createCourseCard(course, index) {
+            const card = document.createElement('div');
+            card.className = 'course-card bg-white rounded px-2 py-1 text-xs border border-slate-200 cursor-move hover:shadow-md transition-shadow';
+            card.draggable = true;
+            card.dataset.courseIndex = index;
+            card.dataset.courseId = course.id;
+            
+            // Shorten course name for display
+            const shortName = course.name.length > 15 ? course.name.substring(0, 15) + '...' : course.name;
+            
+            card.innerHTML = `
+                <div class="font-medium text-slate-700 truncate" title="${course.name}">${shortName}</div>
+                <div class="text-slate-400">${course.credits} TC</div>
+            `;
+            
+            card.addEventListener('dragstart', handleDragStart);
+            card.addEventListener('dragend', handleDragEnd);
+            
+            return card;
+        }
+        
+        // Drag handlers
+        function handleDragStart(e) {
+            e.target.classList.add('opacity-50', 'scale-95');
+            e.dataTransfer.setData('text/plain', e.target.dataset.courseIndex);
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        
+        function handleDragEnd(e) {
+            e.target.classList.remove('opacity-50', 'scale-95');
+            // Remove highlight from all columns
+            document.querySelectorAll('.grade-column').forEach(col => {
+                col.classList.remove('ring-2', 'ring-purple-400', 'bg-purple-50');
+            });
+        }
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('ring-2', 'ring-purple-400', 'bg-purple-50');
+        }
+        
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('ring-2', 'ring-purple-400', 'bg-purple-50');
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('ring-2', 'ring-purple-400', 'bg-purple-50');
+            
+            const courseIndex = e.dataTransfer.getData('text/plain');
+            const card = document.querySelector(`.course-card[data-course-index="${courseIndex}"]`);
+            const targetColumn = e.currentTarget;
+            const targetGrade = parseFloat(targetColumn.dataset.grade);
+            
+            if (card && targetColumn) {
+                targetColumn.appendChild(card);
+                
+                // Update state
+                const state = window.gpaPlannerState;
+                if (state && state.courses[courseIndex]) {
+                    state.courses[courseIndex].assignedGrade = targetGrade;
+                }
+                
+                updatePlannedGPA();
+            }
+        }
+        
+        // Update the planned GPA display
+        function updatePlannedGPA() {
+            const state = window.gpaPlannerState;
+            if (!state) return;
+            
+            let weightedSum = 0;
+            let totalCredits = 0;
+            const gradeCounts = {};
+            
+            state.courses.forEach(course => {
+                weightedSum += course.assignedGrade * course.credits;
+                totalCredits += course.credits;
+                
+                const gradeKey = course.assignedGrade.toFixed(1);
+                if (!gradeCounts[gradeKey]) {
+                    gradeCounts[gradeKey] = { count: 0, credits: 0 };
+                }
+                gradeCounts[gradeKey].count++;
+                gradeCounts[gradeKey].credits += course.credits;
+            });
+            
+            const plannedGPA = totalCredits > 0 ? weightedSum / totalCredits : 0;
+            const meetsTarget = plannedGPA >= state.requiredAvg - 0.001;
+            
+            // Update GPA value
+            const gpaValueEl = document.getElementById('plannedGpaValue');
+            if (gpaValueEl) {
+                gpaValueEl.textContent = plannedGPA.toFixed(3);
+                gpaValueEl.className = `text-lg font-bold ${meetsTarget ? 'text-emerald-600' : 'text-red-600'}`;
+            }
+            
+            // Update progress bar
+            const gpaBarEl = document.getElementById('plannedGpaBar');
+            if (gpaBarEl) {
+                const percentage = Math.min(100, (plannedGPA / 4) * 100);
+                gpaBarEl.style.width = percentage + '%';
+                gpaBarEl.className = `h-3 rounded-full transition-all duration-300 ${meetsTarget ? 'bg-emerald-500' : 'bg-red-400'}`;
+            }
+            
+            // Update status
+            const statusEl = document.getElementById('plannedGpaStatus');
+            if (statusEl) {
+                if (meetsTarget) {
+                    const margin = plannedGPA - state.requiredAvg;
+                    statusEl.innerHTML = `<span class="text-emerald-600">✓ Đạt mục tiêu!</span> <span class="text-slate-500">(+${margin.toFixed(3)})</span>`;
+                } else {
+                    const deficit = state.requiredAvg - plannedGPA;
+                    statusEl.innerHTML = `<span class="text-red-600">✗ Chưa đạt</span> <span class="text-slate-500">(thiếu ${deficit.toFixed(3)})</span>`;
+                }
+            }
+            
+            // Update summary
+            const summaryEl = document.getElementById('gradeSummary');
+            if (summaryEl) {
+                const gradeNames = { '4.0': 'A', '3.5': 'B+', '3.0': 'B', '2.5': 'C+', '2.0': 'C' };
+                const summaryParts = [];
+                
+                Object.entries(gradeCounts)
+                    .sort((a, b) => parseFloat(b[0]) - parseFloat(a[0]))
+                    .forEach(([grade, data]) => {
+                        const name = gradeNames[grade] || grade;
+                        summaryParts.push(`<span class="px-2 py-0.5 bg-slate-100 rounded">${data.count} môn ${name} (${data.credits}TC)</span>`);
+                    });
+                
+                summaryEl.innerHTML = summaryParts.join('');
+            }
+        }
+        
+        // Quick action: Set all courses to a specific grade
+        window.setAllCoursesToGrade = function(targetGrade) {
+            const state = window.gpaPlannerState;
+            if (!state) return;
+            
+            const targetColumn = document.querySelector(`.grade-column[data-grade="${targetGrade}"]`);
+            if (!targetColumn) return;
+            
+            // Move all cards to target column
+            document.querySelectorAll('.course-card').forEach(card => {
+                targetColumn.appendChild(card);
+            });
+            
+            // Update state
+            state.courses.forEach(course => {
+                course.assignedGrade = targetGrade;
+            });
+            
+            updatePlannedGPA();
+        };
+        
+        // Auto distribute grades to meet target with minimum effort
+        window.autoDistributeGrades = function() {
+            const state = window.gpaPlannerState;
+            if (!state) return;
+            
+            // Sort courses by credits (higher credits first - they have more impact)
+            const sortedIndices = state.courses
+                .map((c, i) => ({ index: i, credits: c.credits }))
+                .sort((a, b) => b.credits - a.credits)
+                .map(item => item.index);
+            
+            // Start with all courses at lowest passing grade (C = 2.0)
+            state.courses.forEach(course => {
+                course.assignedGrade = 2.0;
+            });
+            
+            // Calculate current GPA
+            const calcGPA = () => {
+                let sum = 0, credits = 0;
+                state.courses.forEach(c => {
+                    sum += c.assignedGrade * c.credits;
+                    credits += c.credits;
+                });
+                return sum / credits;
+            };
+            
+            // Gradually increase grades until we meet target
+            const gradeSteps = [2.0, 2.5, 3.0, 3.5, 4.0];
+            
+            for (const courseIndex of sortedIndices) {
+                if (calcGPA() >= state.requiredAvg) break;
+                
+                for (let stepIdx = 1; stepIdx < gradeSteps.length; stepIdx++) {
+                    state.courses[courseIndex].assignedGrade = gradeSteps[stepIdx];
+                    if (calcGPA() >= state.requiredAvg) break;
+                }
+            }
+            
+            // Move cards to their columns
+            state.courses.forEach((course, index) => {
+                const card = document.querySelector(`.course-card[data-course-index="${index}"]`);
+                const column = document.querySelector(`.grade-column[data-grade="${course.assignedGrade}"]`);
+                if (card && column) {
+                    column.appendChild(card);
+                }
+            });
+            
+            updatePlannedGPA();
+        };
+        
+        // Helper function to get score 10 range from GPA
+        function getScore10Range(gpa) {
+            if (gpa >= 3.75) return { grade: 'A/A+', range: '≥8.5' };
+            if (gpa >= 3.25) return { grade: 'B+', range: '8.0-8.4' };
+            if (gpa >= 2.75) return { grade: 'B', range: '7.0-7.9' };
+            if (gpa >= 2.25) return { grade: 'C+', range: '6.5-6.9' };
+            if (gpa >= 1.75) return { grade: 'C', range: '5.5-6.4' };
+            if (gpa >= 1.25) return { grade: 'D+', range: '5.0-5.4' };
+            if (gpa >= 0.75) return { grade: 'D', range: '4.0-4.9' };
+            return { grade: 'F', range: '<4.0' };
         }
 
     </script>
